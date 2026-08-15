@@ -39,10 +39,10 @@ class AddTimezoneDialog(Adw.Dialog):
         self._search.connect("search-changed", self._on_search_changed)
         body.append(self._search)
 
-        results_label = Gtk.Label(label="RESULTS", xalign=0)
-        results_label.add_css_class("tz-results-label")
-        results_label.set_margin_top(4)
-        body.append(results_label)
+        self._results_label = Gtk.Label(label="RESULTS", xalign=0)
+        self._results_label.add_css_class("tz-results-label")
+        self._results_label.set_margin_top(4)
+        body.append(self._results_label)
 
         scroller = Gtk.ScrolledWindow()
         scroller.set_vexpand(True)
@@ -50,13 +50,27 @@ class AddTimezoneDialog(Adw.Dialog):
         self._list.set_selection_mode(Gtk.SelectionMode.NONE)
         self._list.add_css_class("boxed-list")
         scroller.set_child(self._list)
-        body.append(scroller)
+
+        self._stack = Gtk.Stack()
+        self._stack.set_vexpand(True)
+        self._stack.add_named(scroller, "results")
+        self._stack.add_named(self._build_empty_state(), "empty")
+        body.append(self._stack)
 
         toolbar_view.set_content(body)
         self.set_child(toolbar_view)
 
         self._all_ids = tzinfo.all_timezone_ids()
         self._populate("")
+
+    def _build_empty_state(self) -> Gtk.Widget:
+        status = Adw.StatusPage()
+        status.add_css_class("tz-empty-state")
+        status.add_css_class("compact")
+        status.set_icon_name("system-search-symbolic")
+        status.set_title("No Results")
+        status.set_description("Try a different city, country, or timezone name.")
+        return status
 
     def _on_search_changed(self, entry: Gtk.SearchEntry) -> None:
         self._populate(entry.get_text().strip())
@@ -81,6 +95,9 @@ class AddTimezoneDialog(Adw.Dialog):
         matches.sort()
         for _, _, tz_id in matches[:60]:
             self._list.append(self._make_row(tz_id))
+
+        self._results_label.set_visible(bool(matches))
+        self._stack.set_visible_child_name("results" if matches else "empty")
 
     def _make_row(self, tz_id: str) -> Gtk.Widget:
         row = Gtk.ListBoxRow()
@@ -116,6 +133,8 @@ class AddTimezoneDialog(Adw.Dialog):
         add_btn = Gtk.Button()
         add_btn.add_css_class("tz-add-btn")
         add_btn.add_css_class("circular")
+        add_btn.set_valign(Gtk.Align.CENTER)
+        add_btn.set_halign(Gtk.Align.CENTER)
         icon = Gtk.Image.new_from_icon_name("list-add-symbolic")
         add_btn.set_child(icon)
         if tz_id in self._existing:
