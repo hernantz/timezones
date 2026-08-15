@@ -21,13 +21,16 @@ BuildRequires:  desktop-file-utils
 
 Requires:       python3
 Requires:       python3-gobject
-Requires:       python3-pytz
 Requires:       adwaita-icon-theme
 Requires:       gtk4
 Requires:       libadwaita >= 1.7
 
-# If you include python modules installed by meson:
-# Requires: python3-zoneinfo is built-in; no extra dep.
+# zoneinfo is stdlib since 3.9, so no Python timezone package is needed. It
+# reads the IANA database from disk rather than bundling one, and the app reads
+# zone.tab/iso3166.tab from that same directory for the country of each zone.
+# Both come from tzdata; named explicitly because this package now depends on
+# those two files being present, not merely on the compiled zones.
+Requires:       tzdata
 
 %description
 World time clocks with native GTK4 UI.

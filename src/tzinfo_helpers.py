@@ -3,20 +3,89 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from zoneinfo import ZoneInfo, available_timezones
+from pathlib import Path
+from zoneinfo import TZPATH, ZoneInfo
 
-import pytz
+# ---- The zone list, and the country each zone belongs to --------------------
+#
+# zoneinfo reads TZif binaries, which hold transitions, offsets and
+# abbreviations and nothing else — no country, no coordinates. Those live in the
+# plain-text tables the IANA distribution ships beside the compiled zones:
+# zone.tab maps each zone to the ISO 3166 code of the country keeping it, and
+# iso3166.tab spells those codes out. pytz read the very same two files; its
+# only advantage was doing the open() for us.
+#
+# Both are taken as present: Fedora's tzdata and the GNOME and freedesktop
+# flatpak runtimes all ship them, and those are the ways this app is installed.
 
-_TZ_TO_COUNTRY: dict[str, str] = {}
-for _cc, _zones in pytz.country_timezones.items():
-    _country = pytz.country_names.get(_cc, _cc)
-    for _z in _zones:
-        _TZ_TO_COUNTRY[_z] = _country
+
+def _read_table(*names: str) -> list[list[str]]:
+    """Rows of the first of `names` found on TZPATH, split into fields.
+
+    TZPATH rather than a hardcoded /usr/share/zoneinfo, so the tables are always
+    read from the same database zoneinfo resolves the zones themselves through.
+
+    Both tables share a format — tab-separated, lines beginning with '#' are
+    comments — and both end in a free-text column that may itself contain a '#',
+    so only whole-line comments are dropped.
+    """
+    for name in names:
+        for root in TZPATH:
+            path = Path(root, name)
+            if path.is_file():
+                return [
+                    line.split("\t")
+                    for line in path.read_text(encoding="utf-8").splitlines()
+                    if line and not line.startswith("#")
+                ]
+    return []
+
+
+@lru_cache(maxsize=None)
+def _tz_to_country() -> dict[str, str]:
+    """Every zone the app offers as a city, mapped to the country keeping it."""
+    countries = {row[0]: row[1] for row in _read_table("iso3166.tab") if len(row) >= 2}
+
+    # zone1970.tab is the maintained table, but it omits every zone that has
+    # agreed with another since 1970 — Europe/Vatican, Africa/Accra and a couple
+    # hundred more cities someone may well search for. zone.tab is marked
+    # deprecated and still lists them all, so prefer it and fall back. Reading
+    # the country column as a comma-separated list accepts either shape:
+    # zone1970.tab names every country sharing a zone, most significant first,
+    # and zone.tab's lone code parses as a list of one.
+    table: dict[str, str] = {}
+    for row in _read_table("zone.tab", "zone1970.tab"):
+        if len(row) < 3:
+            continue
+        code, tz_id = row[0].split(",")[0], row[2]
+        table.setdefault(tz_id, countries.get(code, code))
+
+    # UTC is not a place, so zone.tab does not list it — but a world clock
+    # without a UTC row is missing the zone a good share of its users actually
+    # work in. Added by hand rather than by admitting the whole Etc/ family,
+    # whose GMT±N members invert their sign (Etc/GMT+5 resolves to UTC−5) and
+    # would misread badly in a column of offsets. The name spelled out keeps the
+    # subtitle from reading "UTC · UTC · UTC+0h".
+    table.setdefault("UTC", "Coordinated Universal Time")
+    return table
 
 
 @lru_cache(maxsize=None)
 def all_timezone_ids() -> list[str]:
-    return sorted(z for z in available_timezones() if "/" in z and not z.startswith("Etc/"))
+    """Every zone offered as a city, sorted.
+
+    The table lists *places*, so unlike zoneinfo.available_timezones() it never
+    yields UTC, MST7MDT or Etc/GMT+5 — offsets wearing a zone's clothes, with no
+    city behind them and a sign convention backwards from what the name reads
+    like — nor the backward-compatibility aliases (America/Buenos_Aires,
+    Africa/Asmera) that would otherwise sit in the list beside the canonical
+    name of the same city. Nothing has to be filtered back out.
+    """
+    return sorted(_tz_to_country())
+
+
+def is_known_timezone(tz_id: str) -> bool:
+    return tz_id in _tz_to_country()
 
 
 def city_name(tz_id: str) -> str:
@@ -24,7 +93,7 @@ def city_name(tz_id: str) -> str:
 
 
 def country_name(tz_id: str) -> str:
-    return _TZ_TO_COUNTRY.get(tz_id, tz_id.split("/", 1)[0].replace("_", " "))
+    return _tz_to_country().get(tz_id, tz_id.split("/", 1)[0].replace("_", " "))
 
 
 def abbreviation(tz_id: str, at: datetime | None = None) -> str:

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from zoneinfo import available_timezones
 
 from . import tzinfo_helpers as tzinfo
 
@@ -29,7 +28,7 @@ class ClockModel:
 
     @staticmethod
     def is_valid_tz(tz: str) -> bool:
-        return tz in available_timezones()
+        return tzinfo.is_known_timezone(tz)
 
     @property
     def reference(self) -> City | None:
