@@ -1,0 +1,1 @@
+option('with_appdata', type: 'boolean', value: true, description: 'Install appdata file')

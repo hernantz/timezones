@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
+pip-wheel-metadata/
+site-packages/
+
+# Meson
+builddir/
+build/
+meson-logs/
+meson-private/
+
+# Translation
+po/*.mo
+po/*.pot
+*.gmo
+*.mo
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# App/user config files (if any)
+*.json
+*.tmp
+*.log

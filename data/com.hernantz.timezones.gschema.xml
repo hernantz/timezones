@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="com.hernantz.timezones" path="/com/hernantz/timezones/">
+    <key name="fmt-24h" type="b">
+      <default>true</default>
+      <summary>Use 24-hour time format</summary>
+    </key>
+
+    <key name="theme-mode" type="s">
+      <default>'system'</default>
+      <summary>Theme mode: system, light, dark</summary>
+      <description>Controls Adw color scheme override.</description>
+    </key>
+
+    <key name="show-offsets" type="b">
+      <default>true</default>
+      <summary>Show UTC offset pills on non-reference rows</summary>
+    </key>
+
+    <key name="show-daynight" type="b">
+      <default>true</default>
+      <summary>Show day / night colors on timeline cells</summary>
+    </key>
+
+    <key name="compact-rows" type="b">
+      <default>false</default>
+      <summary>Use a denser row height</summary>
+    </key>
+  </schema>
+</schemalist>

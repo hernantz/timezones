@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.hernantz.timezones</id>
+  <metadata_license>FSFAP</metadata_license>
+  <name>Timezones</name>
+  <summary>World time clocks with native GTK4 UI</summary>
+  <description>
+    <p>Native GTK4 + Libadwaita world time clocks.</p>
+  </description>
+  <launchable type="desktop-id">com.hernantz.timezones</launchable>
+</component>

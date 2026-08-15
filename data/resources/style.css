@@ -1,0 +1,597 @@
+/* ---- Timezones design tokens (light) --------------------------------- */
+@define-color radius_window 14px;
+
+window.tz-window {
+  background-color: #fafafb;
+}
+
+headerbar.tz-headerbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e1e1e6;
+  min-height: 47px;
+}
+
+headerbar.tz-headerbar windowtitle,
+headerbar.tz-headerbar .title {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+/* ---- Timezone row ------------------------------------------------------ */
+
+.tz-row {
+  background-color: #ffffff;
+  border: 1px solid #e1e1e6;
+  border-radius: 12px;
+}
+
+.tz-row.reference {
+  border-color: #b9d4f8;
+  box-shadow: inset 0 0 0 1px #b9d4f8;
+}
+
+.tz-drag-handle {
+  color: #9a9aa1;
+  min-width: 26px;
+}
+
+.tz-identity {
+  min-width: 152px;
+}
+
+.tz-city-name {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #1c1c1e;
+}
+
+.tz-subtitle {
+  font-size: 12px;
+  color: #6f6f76;
+}
+
+.tz-chip {
+  font-size: 11px;
+  font-weight: 800;
+  color: #1c71d8;
+  background-color: #e3edfb;
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.tz-chip.you {
+  color: #2ec27e;
+  background-color: #e3f8ee;
+}
+
+.tz-time-block {
+  min-width: 96px;
+  padding-right: 14px;
+}
+
+.tz-time-divider {
+  min-width: 1px;
+  background-color: #e1e1e6;
+}
+
+.tz-time-big.previewing {
+  color: #3584e4;
+}
+
+.tz-time-big {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #1c1c1e;
+}
+
+.tz-date {
+  font-size: 11.5px;
+  color: #6f6f76;
+}
+
+.tz-date.accent {
+  color: #1c71d8;
+  font-weight: 700;
+}
+
+.tz-offset-pill {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #6f6f76;
+  background-color: alpha(#000000, 0.045);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.tz-home-icon {
+  color: #1c1c1e;
+  min-width: 16px;
+  min-height: 16px;
+}
+
+.tz-more-btn {
+  color: #6f6f76;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.tz-more-btn:hover {
+  background-color: alpha(#000000, 0.06);
+}
+
+/* ---- Timeline strip ----------------------------------------------------- */
+
+.tz-timeline {
+  background-color: #ffffff;
+}
+
+.tz-cell {
+  min-width: 1px;
+}
+
+.tz-cell.day {
+  background-color: #fff8e3;
+}
+
+.tz-cell.night {
+  background-color: #eaf1fc;
+}
+
+.tz-cell.neutral {
+  background-color: #f1f1f4;
+}
+
+/* The hour a clock change lands on. Same red as Remove timezone below —
+   deliberately the app's one "pay attention" color rather than a second one
+   invented for this, since both mean the same thing to a reader. */
+.tz-cell.dst {
+  background-color: #e01b24;
+}
+
+.tz-cell-slot.dst .tz-cell-label {
+  color: #ffffff;
+}
+
+.tz-cell-label {
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+/* Tone lives on the slot as well as on the painted background, because the
+   hour label is a sibling of that background rather than a child of it —
+   see TimelineStrip._make_cell for why. */
+.tz-cell-slot.day .tz-cell-label {
+  color: #9a6b00;
+}
+
+.tz-cell-slot.night .tz-cell-label {
+  color: #3562a6;
+}
+
+.tz-cell-slot.neutral .tz-cell-label {
+  color: #6f6f76;
+}
+
+/* The day-break "cut" is real margin on the two backgrounds either side of
+   it (showing the row's own background underneath, same as it would between
+   any two ordinary widgets), which rounds each day off into its own capped
+   block. Both margins are on the background only, never on the cell slot,
+   so the gap costs the grid no width and the hour labels stay centered on
+   their columns straight across the break.
+
+   Widths here are load-bearing: the dashed rule is 2px on the seam, i.e.
+   the cap-start column's own leading edge, so cap-end needs 4px behind the
+   seam and cap-start 4px + the rule's 2px ahead of it for the rule to sit
+   centered in the gap. _CAP_MARGIN_START in timeline.py mirrors that 6px. */
+.tz-cell.cap-end {
+  border-radius: 0 9px 9px 0;
+  margin-right: 4px;
+}
+
+.tz-cell.cap-start {
+  border-radius: 9px 0 0 9px;
+  margin-left: 6px;
+}
+
+.tz-daybreak {
+  min-width: 0px;
+  background-color: transparent;
+  border-left: 2px dashed #d3d3d9;
+}
+
+.tz-marker {
+  background-color: alpha(#ffffff, 0.65);
+  border-radius: 999px;
+  min-width: 15px;
+  min-height: 15px;
+}
+
+.tz-marker.sun {
+  color: #e5a50a;
+}
+
+.tz-marker.moon {
+  color: #3584e4;
+}
+
+.tz-flag {
+  font-size: 9px;
+  font-weight: 800;
+  color: #1c1c1e;
+  background-color: #ffffff;
+  border: 1px solid #d3d3d9;
+  border-radius: 999px;
+  /* Vertical padding stays ahead of the glyphs' own ascent: the pill is
+     allocated at its natural height, so a tight box crops the caps' tops. */
+  padding: 3px 8px;
+}
+
+.tz-flag.accent {
+  color: #ffffff;
+  background-color: #3584e4;
+  border-color: #1c71d8;
+}
+
+/* ---- Clock-change warning ------------------------------------------------- */
+
+.tz-dst-warning {
+  background-color: alpha(#e01b24, 0.07);
+  border: 1px solid alpha(#e01b24, 0.18);
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+
+.tz-dst-warning label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #c01c28;
+}
+
+.tz-dst-warning image {
+  color: #e01b24;
+}
+
+/* ---- Now line (ambient, quiet) ------------------------------------------- */
+
+.tz-now-line {
+  min-width: 0px;
+  background-color: transparent;
+  border-left: 2px dashed alpha(#3584e4, 0.5);
+}
+
+.tz-now-dot {
+  min-width: 7px;
+  min-height: 7px;
+  border-radius: 999px;
+  background-color: alpha(#3584e4, 0.6);
+}
+
+/* ---- Scrub line (active, prominent) -------------------------------------- */
+
+.tz-scrub-line {
+  background-color: #3584e4;
+}
+
+.tz-scrub-pill {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #ffffff;
+  background-color: #3584e4;
+  border-radius: 999px;
+  padding: 3px 6px 3px 12px;
+}
+
+.tz-scrub-pill.pinned {
+  background-color: #1c71d8;
+  box-shadow: 0 0 0 2px alpha(#1c71d8, 0.35);
+}
+
+.tz-scrub-unpin {
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0;
+  color: #ffffff;
+  background-color: alpha(#ffffff, 0.25);
+}
+
+.tz-scrub-unpin:hover {
+  background-color: alpha(#ffffff, 0.4);
+}
+
+/* ---- Popover row menu ----------------------------------------------------- */
+
+.tz-row-menu {
+  padding: 6px;
+}
+
+.tz-row-menu .destructive-action {
+  color: #e01b24;
+}
+
+/* ---- Empty state --------------------------------------------------------- */
+
+.tz-empty-state image {
+  color: #c2c2cc;
+}
+
+.tz-empty-state .title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.tz-empty-state .description {
+  color: #6f6f7a;
+}
+
+/* ---- Add-timezone dialog / preferences swatches --------------------------- */
+
+.tz-search-entry {
+  border-radius: 10px;
+}
+
+.tz-results-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #9a9aa1;
+}
+
+.tz-add-btn {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  background-color: #3584e4;
+  color: #ffffff;
+}
+
+.tz-swatch {
+  min-height: 50px;
+  border-radius: 8px;
+  border: 1px solid #e1e1e6;
+  overflow: hidden;
+}
+
+.tz-swatch.selected {
+  border: 2px solid #3584e4;
+}
+
+.tz-swatch-header {
+  min-height: 12px;
+}
+
+.tz-swatch-body {
+  min-height: 38px;
+}
+
+.tz-swatch-light .tz-swatch-header { background-color: #ffffff; }
+.tz-swatch-light .tz-swatch-body { background-color: #fafafb; }
+.tz-swatch-dark .tz-swatch-header { background-color: #2b2b38; }
+.tz-swatch-dark .tz-swatch-body { background-color: #242430; }
+
+.tz-swatch-line {
+  min-height: 3px;
+  border-radius: 2px;
+  margin: 2px 6px;
+}
+.tz-swatch-light .tz-swatch-line { background-color: alpha(#1c1c1e, 0.18); }
+.tz-swatch-dark .tz-swatch-line { background-color: alpha(#ffffff, 0.22); }
+
+.tz-swatch-label {
+  font-size: 12px;
+}
+
+.tz-swatch-label.selected {
+  color: #1c1c1e;
+  font-weight: 700;
+}
+
+.tz-swatch-label.unselected {
+  color: #6f6f76;
+}
+
+/* ---- Jump to date popover -------------------------------------------------- */
+
+.tz-cal-weekday {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9a9aa1;
+}
+
+.tz-cal-day {
+  font-size: 12.5px;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0;
+}
+
+.tz-cal-day.muted {
+  color: #9a9aa1;
+}
+
+.tz-cal-day.today {
+  box-shadow: 0 0 0 1.5px #3584e4 inset;
+  color: #1c71d8;
+  font-weight: 700;
+}
+
+.tz-cal-day.selected {
+  background-color: #3584e4;
+  color: #ffffff;
+}
+
+.tz-jump-today {
+  color: #3584e4;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.tz-viewing-banner {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1c71d8;
+  background-color: #e3edfb;
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+/* =======================================================================
+   Dark mode overrides — toggled via the "dark" class on the top-level
+   window (kept in sync with Adw.StyleManager:dark by main_window.py).
+   ======================================================================= */
+
+window.tz-window.dark {
+  background-color: #242430;
+}
+
+window.tz-window.dark headerbar.tz-headerbar {
+  background-color: #2b2b38;
+  border-bottom-color: #3d3d4d;
+}
+
+window.tz-window.dark .tz-row {
+  background-color: #2f2f3d;
+  border-color: #3d3d4d;
+}
+
+window.tz-window.dark .tz-row.reference {
+  border-color: #3a5f96;
+  box-shadow: inset 0 0 0 1px #3a5f96;
+}
+
+window.tz-window.dark .tz-drag-handle {
+  color: #7b7b8c;
+}
+
+window.tz-window.dark .tz-city-name,
+window.tz-window.dark .tz-time-big,
+window.tz-window.dark .tz-home-icon,
+window.tz-window.dark .tz-flag {
+  color: #f2f2f5;
+}
+
+window.tz-window.dark .tz-time-big.previewing {
+  color: #3584e4;
+}
+
+window.tz-window.dark .tz-subtitle,
+window.tz-window.dark .tz-date {
+  color: #a7a7b8;
+}
+
+window.tz-window.dark .tz-date.accent {
+  color: #8ab4f8;
+}
+
+window.tz-window.dark .tz-time-divider {
+  background-color: #3d3d4d;
+}
+
+window.tz-window.dark .tz-offset-pill {
+  color: #a7a7b8;
+  background-color: alpha(#ffffff, 0.08);
+}
+
+window.tz-window.dark .tz-more-btn {
+  color: #a7a7b8;
+}
+
+window.tz-window.dark .tz-more-btn:hover {
+  background-color: alpha(#ffffff, 0.08);
+}
+
+window.tz-window.dark .tz-timeline {
+  background-color: #2f2f3d;
+}
+
+window.tz-window.dark .tz-cell.day {
+  background-color: #4a3f22;
+}
+
+window.tz-window.dark .tz-cell.night {
+  background-color: #20263a;
+}
+
+window.tz-window.dark .tz-cell.neutral {
+  background-color: #34344400;
+}
+
+window.tz-window.dark .tz-cell-slot.day .tz-cell-label {
+  color: #e8c468;
+}
+
+window.tz-window.dark .tz-cell-slot.night .tz-cell-label {
+  color: #93b4ea;
+}
+
+/* The transition cell keeps the full-strength red on both themes — it is a
+   marker, not a surface, and muting it would put it back among the tints it
+   has to stand out from. Only the warning band's text lightens, since there
+   it has to stay legible against a dark background. */
+window.tz-window.dark .tz-dst-warning {
+  background-color: alpha(#e01b24, 0.14);
+  border-color: alpha(#f66151, 0.3);
+}
+
+window.tz-window.dark .tz-dst-warning label {
+  color: #f66151;
+}
+
+window.tz-window.dark .tz-dst-warning image {
+  color: #f66151;
+}
+
+window.tz-window.dark .tz-daybreak {
+  border-left-color: #4c4c5e;
+}
+
+window.tz-window.dark .tz-marker {
+  background-color: alpha(#000000, 0.35);
+}
+
+window.tz-window.dark .tz-flag {
+  background-color: #2f2f3d;
+  border-color: #4c4c5e;
+}
+
+window.tz-window.dark .tz-chip {
+  color: #8ab4f8;
+  background-color: #28405f;
+}
+
+window.tz-window.dark .tz-swatch {
+  border-color: #3d3d4d;
+}
+
+window.tz-window.dark .tz-swatch-label.unselected {
+  color: #a7a7b8;
+}
+
+window.tz-window.dark .tz-swatch-label.selected {
+  color: #f2f2f5;
+}
+
+window.tz-window.dark .tz-results-label {
+  color: #7b7b8c;
+}
+
+window.tz-window.dark .tz-viewing-banner {
+  color: #8ab4f8;
+  background-color: #28405f;
+}
+
+window.tz-window.dark .tz-empty-state image {
+  color: #55556a;
+}
+
+window.tz-window.dark .tz-empty-state .title {
+  color: #f2f2f5;
+}
+
+window.tz-window.dark .tz-empty-state .description {
+  color: #a7a7b8;
+}

@@ -1,0 +1,9 @@
+#!/usr/bin/env @PYTHON@
+
+import sys
+import os
+
+sys.path.insert(0, '@pkgdatadir@')
+
+from app import main
+sys.exit(main())
