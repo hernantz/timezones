@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
+from math import asin, atan2, cos, degrees, radians, sin
 from pathlib import Path
 from zoneinfo import TZPATH, ZoneInfo
+
+# Signed degrees and minutes, optionally seconds, as zone.tab writes a position:
+# +DDMM+DDDMM or +DDMMSS+DDDMMSS, latitude then longitude, no separator.
+_ISO6709 = re.compile(r"([+-]\d{2})(\d{2})(\d{2})?([+-]\d{3})(\d{2})(\d{2})?")
 
 # ---- The zone list, and the country each zone belongs to --------------------
 #
@@ -71,6 +77,41 @@ def _tz_to_country() -> dict[str, str]:
 
 
 @lru_cache(maxsize=None)
+def _tz_to_coords() -> dict[str, tuple[float, float]]:
+    """Each zone's principal city, as (latitude, longitude) in degrees.
+
+    zone.tab carries the coordinates in the column beside the country code, in
+    ISO 6709: a signed degrees-and-minutes pair, optionally with seconds — 363
+    zones written +DDMM+DDDMM and the other 55 +DDMMSS+DDDMMSS. They locate the
+    city the zone is named for, which is the city the row is labelled with, so
+    the sun they imply is the sun over the place the row claims to be.
+    """
+    coords: dict[str, tuple[float, float]] = {}
+    for row in _read_table("zone.tab", "zone1970.tab"):
+        if len(row) < 3:
+            continue
+        match = _ISO6709.fullmatch(row[1])
+        if match is None:
+            continue
+        lat_d, lat_m, lat_s, lon_d, lon_m, lon_s = match.groups()
+        coords.setdefault(
+            row[2], (_decimal_degrees(lat_d, lat_m, lat_s), _decimal_degrees(lon_d, lon_m, lon_s))
+        )
+    return coords
+
+
+def _decimal_degrees(degree: str, minute: str, second: str | None) -> float:
+    """A signed ISO 6709 degree/minute/second triple as decimal degrees.
+
+    The sign belongs to the angle as a whole, not to its degrees alone, so it is
+    applied after the minutes and seconds are added on — negating first would
+    put every southern and western coordinate on the wrong side of its degree.
+    """
+    magnitude = abs(int(degree)) + int(minute) / 60 + int(second or 0) / 3600
+    return -magnitude if degree.startswith("-") else magnitude
+
+
+@lru_cache(maxsize=None)
 def all_timezone_ids() -> list[str]:
     """Every zone offered as a city, sorted.
 
@@ -123,8 +164,66 @@ def local_now(tz_id: str, at: datetime | None = None) -> datetime:
     return at.astimezone(ZoneInfo(tz_id))
 
 
+# ---- Daylight ---------------------------------------------------------------
+
+# Sunrise and sunset are conventionally the moments the sun's *upper limb* meets
+# the horizon, which the sun's own radius and average atmospheric refraction put
+# 0.833 degrees below the geometric one.
+_HORIZON_DEGREES = -0.833
+
+
+def solar_elevation(latitude: float, longitude: float, at: datetime) -> float:
+    """The sun's angle above the horizon, in degrees, at that place and instant.
+
+    The low-precision NOAA solar position algorithm, good to roughly a minute of
+    time this century — against hour-wide cells, which ask far less of it.
+
+    Asking for the angle at an instant, rather than for the day's sunrise and
+    sunset, is what keeps this honest inside the polar circles. There, days
+    occur with no sunrise to compute, and every formulation solving for one has
+    to special-case the moment its acos() leaves the domain. An angle always
+    exists: in Longyearbyen in December it is simply negative all day long, and
+    the strip shades every cell dark without being told about polar night.
+    """
+    # Days since J2000.0. The Unix epoch is JD 2440587.5, and `at` names an
+    # instant, so this is UTC however the caller happened to build the datetime.
+    n = at.timestamp() / 86400.0 + 2440587.5 - 2451545.0
+
+    mean_longitude = radians((280.460 + 0.9856474 * n) % 360)
+    mean_anomaly = radians((357.528 + 0.9856003 * n) % 360)
+    ecliptic_longitude = mean_longitude + radians(
+        1.915 * sin(mean_anomaly) + 0.020 * sin(2 * mean_anomaly)
+    )
+    obliquity = radians(23.439 - 0.0000004 * n)
+
+    declination = asin(sin(obliquity) * sin(ecliptic_longitude))
+    right_ascension = atan2(cos(obliquity) * sin(ecliptic_longitude), cos(ecliptic_longitude))
+
+    # Greenwich mean sidereal time in hours, turned into degrees and carried
+    # east to the meridian of the place, giving the sun's hour angle there.
+    hour_angle = radians((18.697374558 + 24.06570982441908 * n) % 24 * 15 + longitude)
+    hour_angle -= right_ascension
+
+    lat = radians(latitude)
+    return degrees(
+        asin(sin(lat) * sin(declination) + cos(lat) * cos(declination) * cos(hour_angle))
+    )
+
+
+def is_daylight(tz_id: str, at: datetime) -> bool:
+    """Whether the sun stands above the horizon over `tz_id`'s city, then."""
+    coords = _tz_to_coords().get(tz_id)
+    if coords is None:
+        # UTC is the only zone the app offers that has no coordinates, being a
+        # reference rather than a place. Nothing casts a shadow there, so fall
+        # back to the clock-face convention.
+        return is_daylight_hour(local_now(tz_id, at).hour)
+    latitude, longitude = coords
+    return solar_elevation(latitude, longitude, at) > _HORIZON_DEGREES
+
+
 def is_daylight_hour(local_hour: int) -> bool:
-    """Fixed 6am-6pm heuristic. TODO: replace with real sunrise/sunset lookup per city/date."""
+    """Fixed 6am-6pm convention, for a zone with no coordinates to do better."""
     return 6 <= (local_hour % 24) < 18
 
 

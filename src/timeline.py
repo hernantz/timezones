@@ -224,10 +224,9 @@ class TimelineStrip(Gtk.Overlay):
         dst_columns = {column for column, _ in (transitions or ())}
 
         day_flags = [
-            tzinfo.is_daylight_hour(model.local_hour_at_column(city, c, at))
-            for c in range(_COLUMNS)
+            tzinfo.is_daylight(city.tz, model.column_instant(c, at)) for c in range(_COLUMNS)
         ]
-        prev_day = tzinfo.is_daylight_hour(model.local_hour_at_column(city, -1, at))
+        prev_day = tzinfo.is_daylight(city.tz, model.column_instant(-1, at))
 
         for col in range(_COLUMNS):
             is_day = day_flags[col]
