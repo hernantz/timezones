@@ -488,12 +488,12 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         cities = self._model.cities
         try:
             source = next(c for c in cities if c.tz == source_tz)
-            target_index = next(i for i, c in enumerate(cities) if c.tz == target_tz)
+            target = next(c for c in cities if c.tz == target_tz)
         except StopIteration:
             return
-        cities.remove(source)
-        target_index = next(i for i, c in enumerate(cities) if c.tz == target_tz)
-        cities.insert(target_index, source)
+        # Dropping onto a row trades the two places outright; every other row
+        # keeps the slot it had.
+        self._model.swap(source, target)
         self._persist()
         self._rebuild_rows()
 

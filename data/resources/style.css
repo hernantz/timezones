@@ -23,11 +23,37 @@ headerbar.tz-headerbar .title {
   background-color: #ffffff;
   border: 1px solid #e1e1e6;
   border-radius: 12px;
+  /* Keeps every child off the row's own edge. GTK clips an overflow:hidden
+     box's children to its *border* box, not its padding box, so a child that
+     paints a background edge to edge — the timeline's hour tints, which fill
+     the row's full height — paints straight over the border and leaves it
+     interrupted for the width of the strip. 2px, not 1px: it also has to
+     clear the thickest inset ring drawn on this row (.drop-target, below). */
+  padding: 2px;
 }
 
 .tz-row.reference {
   border-color: #b9d4f8;
   box-shadow: inset 0 0 0 1px #b9d4f8;
+}
+
+/* Drop feedback. Everything here is drawn with inset shadows, background and
+   opacity so the hint never changes a row's size — a real border would reflow
+   the list and make the card under the pointer jump. */
+.tz-row {
+  transition: box-shadow 120ms ease-out, background-color 120ms ease-out,
+    opacity 120ms ease-out;
+}
+
+.dragging .tz-row {
+  opacity: 0.35;
+}
+
+/* The row the drag would trade places with, lit up whole. */
+.drop-target .tz-row {
+  background-color: #eaf2fd;
+  border-color: #3584e4;
+  box-shadow: inset 0 0 0 2px #3584e4;
 }
 
 .tz-drag-handle {
@@ -461,6 +487,13 @@ window.tz-window.dark .tz-row {
 window.tz-window.dark .tz-row.reference {
   border-color: #3a5f96;
   box-shadow: inset 0 0 0 1px #3a5f96;
+}
+
+/* Out-specify the dark row rules, or the hint loses to them on every row. */
+window.tz-window.dark .drop-target .tz-row {
+  background-color: #38384c;
+  border-color: #62a0ea;
+  box-shadow: inset 0 0 0 2px #62a0ea;
 }
 
 window.tz-window.dark .tz-drag-handle {

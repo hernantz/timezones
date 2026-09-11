@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from gi.repository import Gdk, Gio, GObject, Gtk
+from gi.repository import Gdk, Gio, GObject, Graphene, Gtk
 
 from . import tzinfo_helpers as tzinfo
 from .model import City, ClockModel
 from .timeline import TimelineStrip
 
 _DRAG_MIME = "application/x-timezones-row"
+
+# The row currently being dragged, so every other row can tell "the pointer is
+# carrying me" from "the pointer is carrying someone else".
+_drag_row: "TimezoneRow | None" = None
 
 
 class TimezoneRow(Gtk.Box):
@@ -323,28 +327,89 @@ class TimezoneRow(Gtk.Box):
     def get_timeline(self) -> TimelineStrip:
         return self._timeline
 
+    def _drag_icon(self) -> Gdk.Paintable:
+        """A *frozen* picture of this row, for the card that follows the cursor.
+
+        Gtk.WidgetPaintable keeps rendering the live widget, so the row left
+        behind and the card under the pointer would be the same picture: the
+        moment `.dragging` fades the placeholder, the thing being dragged fades
+        with it and the user is left dragging nothing. Snapshotting once, here
+        in `prepare` — before `drag-begin` adds the class — keeps the card at
+        full strength while the placeholder dims.
+        """
+        width, height = self.get_width(), self.get_height()
+        live = Gtk.WidgetPaintable.new(self)
+        if width <= 0 or height <= 0:
+            return live
+        snapshot = Gtk.Snapshot.new()
+        live.snapshot(snapshot, width, height)
+        frozen = snapshot.to_paintable(Graphene.Size().init(width, height))
+        # to_paintable() yields None for an empty node; a live icon beats none.
+        return frozen if frozen is not None else live
+
     def _setup_dnd(self) -> None:
         drag_source = Gtk.DragSource.new()
         drag_source.set_actions(Gdk.DragAction.MOVE)
 
         def on_prepare(source: Gtk.DragSource, x: float, y: float):
-            paintable = Gtk.WidgetPaintable.new(self)
-            source.set_icon(paintable, int(x), int(y))
+            # x/y arrive in *handle* coordinates while the icon is the whole
+            # row, so translate the grab point into row space. (Today the
+            # handle sits at the row's origin and this is a no-op, but it stops
+            # being one the moment the handle moves.)
+            ok, bounds = self._handle.compute_bounds(self)
+            hx, hy = (bounds.origin.x + x, bounds.origin.y + y) if ok else (x, y)
+            source.set_icon(self._drag_icon(), int(hx), int(hy))
             value = GObject.Value(str, self.city.tz)
             return Gdk.ContentProvider.new_for_value(value)
 
+        def on_begin(*_args) -> None:
+            global _drag_row
+            _drag_row = self
+            self.add_css_class("dragging")
+            self._handle.set_cursor(Gdk.Cursor.new_from_name("grabbing"))
+
+        def on_end(*_args) -> None:
+            global _drag_row
+            _drag_row = None
+            self.remove_css_class("dragging")
+            self._handle.set_cursor(Gdk.Cursor.new_from_name("grab"))
+
         drag_source.connect("prepare", on_prepare)
-        drag_source.connect("drag-begin", lambda *_a: self.add_css_class("dragging"))
-        drag_source.connect("drag-end", lambda *_a: self.remove_css_class("dragging"))
+        drag_source.connect("drag-begin", on_begin)
+        drag_source.connect("drag-end", on_end)
         self._handle.add_controller(drag_source)
 
         drop_target = Gtk.DropTarget.new(str, Gdk.DragAction.MOVE)
 
-        def on_drop(target: Gtk.DropTarget, value: str, x: float, y: float) -> bool:
-            if value and value != self.city.tz:
-                self.emit("reorder", value, self.city.tz)
-                return True
-            return False
+        def clear_hint() -> None:
+            self.remove_css_class("drop-target")
 
+        def hint() -> bool:
+            """Light up this whole row as the one the drag would trade places with.
+
+            Hovering the source row itself is a no-op, which is what stops the
+            list from twitching as the drag passes back over its own gap.
+            """
+            if _drag_row is self:
+                clear_hint()
+                return False
+            self.add_css_class("drop-target")
+            return True
+
+        def on_motion(_target: Gtk.DropTarget, _x: float, _y: float) -> int:
+            return Gdk.DragAction.MOVE if hint() else 0
+
+        def on_leave(_target: Gtk.DropTarget) -> None:
+            clear_hint()
+
+        def on_drop(target: Gtk.DropTarget, value: str, _x: float, _y: float) -> bool:
+            clear_hint()
+            if not value or value == self.city.tz:
+                return False
+            self.emit("reorder", value, self.city.tz)
+            return True
+
+        drop_target.connect("motion", on_motion)
+        drop_target.connect("leave", on_leave)
         drop_target.connect("drop", on_drop)
         self.add_controller(drop_target)

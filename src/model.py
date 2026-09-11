@@ -51,6 +51,10 @@ class ClockModel:
         if i < len(self.cities) - 1:
             self.cities[i + 1], self.cities[i] = self.cities[i], self.cities[i + 1]
 
+    def swap(self, a: City, b: City) -> None:
+        i, j = self.cities.index(a), self.cities.index(b)
+        self.cities[i], self.cities[j] = self.cities[j], self.cities[i]
+
     def offset_hours(self, city: City, at: datetime | None = None) -> float:
         ref = self.reference
         if ref is None:
@@ -121,25 +125,38 @@ class ClockModel:
         """Every clock change `city` makes inside the strip, with the column it
         lands in — the cell the strip marks and the warning text describes.
 
-        The column reported is the first one on the *new* side of the change:
-        the cell whose label is the repeated hour, or the one the skipped hour
-        would have occupied.
+        The column reported is the one the change falls in: the cell whose
+        label is the repeated hour, or the one the skipped hour would have
+        occupied.
         """
         base = self.reference_midnight(at).astimezone(timezone.utc)
-        # One extra start at the front, so a change landing exactly on the
-        # strip's left edge is still seen as a change.
-        starts = [base + timedelta(hours=c) for c in range(-1, COLUMNS)]
+        end = base + timedelta(hours=COLUMNS)
+        # One extra start at each end. In front, so a change landing exactly on
+        # the strip's left edge is still seen as a change; past the right, so
+        # the final cell is scanned across its whole width like every other one
+        # — the offsets bounding it are read at its two ends, and reading only
+        # its start would leave a change part-way through hour 23 invisible.
+        starts = [base + timedelta(hours=c) for c in range(-1, COLUMNS + 1)]
         offsets = [tzinfo.utc_offset(city.tz, start) for start in starts]
 
         found = []
-        for column in range(COLUMNS):
-            if offsets[column] == offsets[column + 1]:
+        for index in range(COLUMNS + 1):
+            if offsets[index] == offsets[index + 1]:
                 continue
-            transition = tzinfo.find_transition(city.tz, starts[column], starts[column + 1])
-            # A change inside that leading hour already happened before the strip
-            # begins; only one landing on column 0 itself belongs to this day.
-            if transition is not None and transition.at >= starts[1]:
-                found.append((column, transition))
+            transition = tzinfo.find_transition(city.tz, starts[index], starts[index + 1])
+            if transition is None:
+                continue
+            # A change inside the leading hour already happened before the strip
+            # begins, and one landing on the right edge belongs to the next day;
+            # only what falls in [midnight, midnight + 24h) is this day's.
+            if not base <= transition.at < end:
+                continue
+            # Counted in whole hours from the strip's own left edge rather than
+            # taken from the loop index, because a zone half an hour off the
+            # reference changes part-way through a cell rather than between two,
+            # and the cell to mark is the one the change happens in.
+            column = int((transition.at - base) // timedelta(hours=1))
+            found.append((column, transition))
         return found
 
     def row_current_date(self, city: City, at: datetime | None = None):
