@@ -7,3 +7,4 @@ Icon=com.hernantz.timezones
 Terminal=false
 Categories=Utility;Clock;
 StartupNotify=true
+StartupWMClass=com.hernantz.timezones

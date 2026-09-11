@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from gi.repository import Adw, Gdk, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 import sys
 
 # Import side-effect ensures template class can resolve resources.
@@ -41,6 +41,10 @@ class App(Adw.Application):
 
 
 def main():
+    # argv[0] would otherwise make the window show up as "python3": the shell
+    # takes the Wayland app_id / X11 WM_CLASS from the program name.
+    GLib.set_prgname("com.hernantz.timezones")
+    GLib.set_application_name("Timezones")
     app = App()
     return app.run(sys.argv)
 

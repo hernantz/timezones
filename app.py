@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from gi.repository import Adw, Gdk, Gio, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 RESOURCE_PREFIX = "/com/hernantz/timezones"
 
@@ -49,6 +49,10 @@ class App(Adw.Application):
 
 
 def main():
+    # argv[0] would otherwise make the window show up as "python3": the shell
+    # takes the Wayland app_id / X11 WM_CLASS from the program name.
+    GLib.set_prgname("com.hernantz.timezones")
+    GLib.set_application_name("Timezones")
     app = App()
     app.run(None)
 
