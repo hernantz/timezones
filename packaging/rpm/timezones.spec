@@ -47,28 +47,20 @@ World time clocks with native GTK4 UI.
 %install
 %meson_install
 
-# Install desktop file
-install -Dm0644 %{_datadir}/applications/timezones.desktop \
-  %{buildroot}%{_datadir}/applications/timezones.desktop
-
-# Install metainfo if you add it (optional)
-# install -Dm0644 %{buildroot}%{_metainfodir}/timezones.appdata.xml %{buildroot}%{_metainfodir}/timezones.appdata.xml
-
-# Install icons (if you add them)
-# Example: place files in data/icons/hicolor/... and have meson install them,
-# or add explicit installs here.
+%check
+desktop-file-validate %{buildroot}%{_datadir}/applications/com.hernantz.timezones.desktop
 
 %files
 %license LICENSE*
 %doc README* 
 
 %{_bindir}/timezones
-%{_datadir}/applications/timezones.desktop
+%{_datadir}/applications/com.hernantz.timezones.desktop
 %{_datadir}/metainfo/*
 
 %{python3_sitearch}/timezones/*
 %{_datadir}/glib-2.0/schemas/com.hernantz.timezones.gschema.xml
 
-%{_datadir}/icons/*
+%{_datadir}/icons/hicolor/scalable/apps/com.hernantz.timezones.svg
 
 %changelog

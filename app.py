@@ -37,6 +37,9 @@ class App(Adw.Application):
     def do_startup(self):
         Adw.Application.do_startup(self)
         _load_style()
+        # Wayland matches the window to com.hernantz.timezones.desktop by app id
+        # and takes the icon from there; X11 needs it named explicitly.
+        Gtk.Window.set_default_icon_name("com.hernantz.timezones")
 
     def do_activate(self):
         win = self.props.active_window

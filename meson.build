@@ -44,7 +44,7 @@ install_data(
   install_dir: join_paths(get_option('datadir'), 'glib-2.0', 'schemas')
 )
 
-gnome.post_install(glib_compile_schemas: true)
+gnome.post_install(glib_compile_schemas: true, gtk_update_icon_cache: true, update_desktop_database: true)
 
 # Configure and install launcher
 conf = configuration_data()
@@ -61,4 +61,22 @@ install_data(
   timezones_script,
   install_dir: get_option('bindir'),
   install_mode: 'rwxr-xr-x'
+)
+
+# Install the application icon, desktop entry and metainfo. The desktop file and
+# metainfo are named after the application id so the shell can match a running
+# window (its Wayland app_id) to this entry, and so pick up Icon= below.
+install_data(
+  'data/icons/hicolor/scalable/apps/com.hernantz.timezones.svg',
+  install_dir: join_paths(get_option('datadir'), 'icons', 'hicolor', 'scalable', 'apps')
+)
+
+install_data(
+  'data/com.hernantz.timezones.desktop',
+  install_dir: join_paths(get_option('datadir'), 'applications')
+)
+
+install_data(
+  'data/appdata/com.hernantz.timezones.metainfo.xml',
+  install_dir: join_paths(get_option('datadir'), 'metainfo')
 )

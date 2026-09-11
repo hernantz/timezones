@@ -5,5 +5,5 @@ Comment=World time clocks with native GTK4 UI
 Exec=timezones
 Icon=com.hernantz.timezones
 Terminal=false
-Categories=Utility;Time;System;
+Categories=Utility;Clock;
 StartupNotify=true

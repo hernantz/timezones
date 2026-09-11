@@ -7,5 +7,5 @@
   <description>
     <p>Native GTK4 + Libadwaita world time clocks.</p>
   </description>
-  <launchable type="desktop-id">com.hernantz.timezones</launchable>
+  <launchable type="desktop-id">com.hernantz.timezones.desktop</launchable>
 </component>
