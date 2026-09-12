@@ -26,6 +26,17 @@ _DEFAULT_CITIES = [
 
 _TICK_SECONDS = 15
 
+# Beyond this the timeline stops growing and the surplus becomes side margins.
+_MAX_LIST_WIDTH = 1180
+# Below this the side-by-side row can no longer hold its fixed columns plus a
+# legible 24-cell strip, so the row switches to its stacked state instead of
+# being squeezed further. 880 is not a taste call: the wide row's own minimum
+# is 878px (26+180+118 of fixed columns, the kebab, and the strip's 456px
+# floor of 24 legible hour cells), so anything narrower is a window GTK cannot
+# actually satisfy — it warns and overflows rather than shrinking. Stacking
+# has to take over at the floor, not below it.
+_NARROW_WIDTH = 880
+
 
 class TimezonesMainWindow(Adw.ApplicationWindow):
     __gtype_name__ = "TimezonesMainWindow"
@@ -43,6 +54,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._viewing_date: date | None = None
         self._preferences: PreferencesDialog | None = None
 
+        self._narrow = False
         self._hovering = False
         self._hover_column = 0.0
         self._pinned = False
@@ -58,6 +70,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._apply_theme_mode(self._settings.get_string("theme-mode", "system"))
         Adw.StyleManager.get_default().connect("notify::dark", self._on_style_dark_changed)
         self._sync_dark_class()
+
+        self._install_breakpoint()
 
         self._rebuild_rows()
         GLib.timeout_add_seconds(_TICK_SECONDS, self._on_tick)
@@ -112,13 +126,30 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_vexpand(True)
         scrolled.set_hexpand(True)
+        # Vertical only: a taller window shows more rows, a shorter one scrolls
+        # them. Horizontally there is nothing to scroll — past the breakpoint
+        # the rows restack rather than overflow.
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
         self._list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self._list_box.set_margin_top(10)
         self._list_box.set_margin_bottom(18)
         self._list_box.set_margin_start(16)
         self._list_box.set_margin_end(16)
-        scrolled.set_child(self._list_box)
+        # Rows are their own height; spare vertical space belongs to the list,
+        # not to the rows, so it collects at the bottom instead of inflating
+        # every card.
+        self._list_box.set_valign(Gtk.Align.START)
+
+        # Past a generous width extra space becomes margin rather than wider
+        # hours: an hour on an ultrawide should read at roughly the same scale
+        # as an hour on a laptop, which is the whole basis for glancing down
+        # the list and comparing.
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(_MAX_LIST_WIDTH)
+        clamp.set_tightening_threshold(_MAX_LIST_WIDTH)
+        clamp.set_child(self._list_box)
+        scrolled.set_child(clamp)
 
         overlay.set_child(scrolled)
         self._cursor = TimelineCursorOverlay()
@@ -147,6 +178,26 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         key = Gtk.EventControllerKey()
         key.connect("key-pressed", self._on_timeline_key)
         self._list_box.add_controller(key)
+
+    def _install_breakpoint(self) -> None:
+        """One breakpoint decides which state every row is in — whether the
+        narrowness comes from a phone or from someone dragging the window in."""
+        condition = Adw.BreakpointCondition.new_length(
+            Adw.BreakpointConditionLengthType.MAX_WIDTH,
+            _NARROW_WIDTH,
+            Adw.LengthUnit.PX,
+        )
+        breakpoint_ = Adw.Breakpoint.new(condition)
+        breakpoint_.connect("apply", lambda *_a: self._set_narrow(True))
+        breakpoint_.connect("unapply", lambda *_a: self._set_narrow(False))
+        self.add_breakpoint(breakpoint_)
+
+    def _set_narrow(self, narrow: bool) -> None:
+        self._narrow = narrow
+        row = self._list_box.get_first_child()
+        while row is not None:
+            row.set_narrow(narrow)
+            row = row.get_next_sibling()
 
     def _build_empty_state(self) -> Gtk.Widget:
         status = Adw.StatusPage()
@@ -219,6 +270,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             row.connect("reorder", self._on_row_reorder)
             row.set_move_enabled(i > 0, i < n - 1)
             row.update(self._model, self._fmt_24h, self._show_offsets, self._show_daynight, at)
+            row.set_narrow(self._narrow)
+            row.set_compact(self._compact_rows)
             self._list_box.append(row)
 
         first_row = self._list_box.get_first_child()
@@ -635,7 +688,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _on_compact_rows_changed(self, _dialog: PreferencesDialog, value: bool) -> None:
         self._compact_rows = value
         self._settings.set_bool("compact-rows", value)
-        if value:
-            self._list_box.add_css_class("compact")
-        else:
-            self._list_box.remove_css_class("compact")
+        row = self._list_box.get_first_child()
+        while row is not None:
+            row.set_compact(value)
+            row = row.get_next_sibling()

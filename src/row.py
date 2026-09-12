@@ -33,6 +33,14 @@ class TimezoneRow(Gtk.Box):
         # card, and the two have to move, reorder and drag as one thing.
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.city = city
+        self._narrow = False
+        self._compact = False
+
+        # A row is sized by its own content and nothing else: it never takes a
+        # share of the window's spare height, so a taller window reveals more
+        # rows instead of stretching the ones already there.
+        self.set_valign(Gtk.Align.START)
+        self.set_vexpand(False)
 
         self._build()
         self._setup_dnd()
@@ -42,6 +50,13 @@ class TimezoneRow(Gtk.Box):
         self._card.add_css_class("tz-row")
         self._card.set_overflow(Gtk.Overflow.HIDDEN)
         self.append(self._card)
+
+        # Everything left of the timeline lives in one box so the narrow layout
+        # can lift it out as a single header line without re-ordering anything
+        # inside it. In the wide layout it is inert: a horizontal box of
+        # fixed-width children measures exactly as those children did.
+        self._head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self._card.append(self._head)
 
         # 1. drag handle
         handle_box = Gtk.Box()
@@ -54,7 +69,7 @@ class TimezoneRow(Gtk.Box):
         handle_box.append(handle_icon)
         handle_box.set_cursor(Gdk.Cursor.new_from_name("grab"))
         self._handle = handle_box
-        self._card.append(handle_box)
+        self._head.append(handle_box)
 
         # 2. identity block
         identity = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
@@ -80,10 +95,14 @@ class TimezoneRow(Gtk.Box):
         self._chip.set_margin_top(2)
         self._chip.set_visible(False)
 
-        identity.append(self._city_label)
+        self._name_line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self._name_line.append(self._city_label)
+
+        identity.append(self._name_line)
         identity.append(self._subtitle_label)
         identity.append(self._chip)
-        self._card.append(identity)
+        self._identity = identity
+        self._head.append(identity)
 
         # 3. time block
         time_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
@@ -122,7 +141,8 @@ class TimezoneRow(Gtk.Box):
         time_block.append(self._time_label)
         time_block.append(self._date_label)
         time_block.append(trailer)
-        self._card.append(time_block)
+        self._time_block = time_block
+        self._head.append(time_block)
 
         # Divider is a dedicated full-height sibling rather than a border on
         # time_block itself — time_block's own box is vertically inset by its
@@ -131,6 +151,7 @@ class TimezoneRow(Gtk.Box):
         divider = Gtk.Box()
         divider.add_css_class("tz-time-divider")
         divider.set_vexpand(True)
+        self._divider = divider
         self._card.append(divider)
 
         # 4. timeline strip
@@ -179,6 +200,7 @@ class TimezoneRow(Gtk.Box):
         self._move_down_action = self._actions.lookup_action("move-down")
 
         end_box.append(self._more_btn)
+        self._end_box = end_box
         self._card.append(end_box)
 
         # 6. clock-change warning, hidden on all but the two days a year it
@@ -195,6 +217,74 @@ class TimezoneRow(Gtk.Box):
         self._warning.append(self._warning_label)
         self._warning.set_visible(False)
         self.append(self._warning)
+
+    # -- Adaptive layout ------------------------------------------------------
+
+    def set_narrow(self, narrow: bool) -> None:
+        """Switch between the two states of the row: side-by-side and stacked.
+
+        Not "the desktop row" and "the mobile row" — one component, two states,
+        picked by the window's breakpoint. A narrow desktop window gets exactly
+        what a phone gets.
+        """
+        if narrow == self._narrow:
+            return
+        self._narrow = narrow
+
+        if narrow:
+            # The head (handle · city · time) becomes a line of its own, with
+            # the kebab pulled up onto it, and the timeline takes the full
+            # width underneath.
+            self._card.remove(self._divider)
+            self._card.remove(self._end_box)
+            self._card.set_orientation(Gtk.Orientation.VERTICAL)
+            self._head.append(self._end_box)
+            self._card.add_css_class("narrow")
+            # 180px of reserved name column is a wide-window luxury; stacked,
+            # the name simply takes what is left after the time.
+            self._identity.set_size_request(-1, -1)
+            self._identity.set_hexpand(True)
+            self._time_block.set_hexpand(False)
+            self._head.set_margin_bottom(2)
+        else:
+            self._head.remove(self._end_box)
+            self._card.set_orientation(Gtk.Orientation.HORIZONTAL)
+            # Back into wide order: head, divider, timeline, kebab.
+            self._card.insert_child_after(self._divider, self._head)
+            self._card.append(self._end_box)
+            self._card.remove_css_class("narrow")
+            self._identity.set_size_request(180, -1)
+            self._identity.set_hexpand(False)
+            self._head.set_margin_bottom(0)
+
+    def set_compact(self, compact: bool) -> None:
+        """The second, opt-in row height — never an automatic response to how
+        many rows exist. Identity collapses to one line and the vertical
+        padding is trimmed; the timeline's own minimum sizes are untouched, so
+        a compact row is short, not degraded.
+        """
+        if compact == self._compact:
+            return
+        self._compact = compact
+
+        pad = 7 if compact else 14
+        for block in (self._identity, self._time_block):
+            block.set_margin_top(pad)
+            block.set_margin_bottom(pad)
+
+        # The chip rides beside the city name instead of below the subtitle,
+        # which is what makes the single line possible at all for a labelled row.
+        self._chip.get_parent().remove(self._chip)
+        if compact:
+            self._card.add_css_class("compact")
+            self._subtitle_label.set_visible(False)
+            self._chip.set_margin_top(0)
+            self._name_line.append(self._chip)
+        else:
+            self._card.remove_css_class("compact")
+            self._subtitle_label.set_visible(True)
+            self._chip.set_margin_top(2)
+            self._identity.append(self._chip)
 
     def set_move_enabled(self, up: bool, down: bool) -> None:
         self._move_up_action.set_enabled(up)
