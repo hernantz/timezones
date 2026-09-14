@@ -288,43 +288,35 @@ headerbar.tz-headerbar .title {
   border-left: 2px dashed alpha(#3584e4, 0.5);
 }
 
-.tz-now-dot {
-  min-width: 7px;
-  min-height: 7px;
-  border-radius: 999px;
-  background-color: alpha(#3584e4, 0.6);
-}
-
 /* ---- Scrub line (active, prominent) -------------------------------------- */
 
 .tz-scrub-line {
   background-color: #3584e4;
 }
 
-.tz-scrub-pill {
-  font-size: 10.5px;
-  font-weight: 800;
-  color: #ffffff;
-  background-color: #3584e4;
-  border-radius: 999px;
-  padding: 3px 6px 3px 12px;
+/* ---- Selection bar (the parked instant, named) ---------------------------- */
+
+.tz-selection-bar {
+  background-color: #e3edfb;
+  border-bottom: 1px solid #cddff5;
+  padding: 5px 8px 5px 12px;
 }
 
-.tz-scrub-pill.pinned {
-  background-color: #1c71d8;
-  box-shadow: 0 0 0 2px alpha(#1c71d8, 0.35);
+.tz-selection-text {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1c71d8;
 }
 
-.tz-scrub-unpin {
-  min-width: 18px;
-  min-height: 18px;
+.tz-selection-close {
+  min-width: 22px;
+  min-height: 22px;
   padding: 0;
-  color: #ffffff;
-  background-color: alpha(#ffffff, 0.25);
+  color: #1c71d8;
 }
 
-.tz-scrub-unpin:hover {
-  background-color: alpha(#ffffff, 0.4);
+.tz-selection-close:hover {
+  background-color: alpha(#1c71d8, 0.12);
 }
 
 /* ---- Popover row menu ----------------------------------------------------- */
@@ -615,6 +607,20 @@ window.tz-window.dark .tz-results-label {
 window.tz-window.dark .tz-viewing-banner {
   color: #8ab4f8;
   background-color: #28405f;
+}
+
+window.tz-window.dark .tz-selection-bar {
+  background-color: #28405f;
+  border-bottom-color: #355073;
+}
+
+window.tz-window.dark .tz-selection-text,
+window.tz-window.dark .tz-selection-close {
+  color: #8ab4f8;
+}
+
+window.tz-window.dark .tz-selection-close:hover {
+  background-color: alpha(#8ab4f8, 0.16);
 }
 
 window.tz-window.dark .tz-empty-state image {

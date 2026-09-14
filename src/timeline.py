@@ -13,6 +13,7 @@ _LABEL_EDGE_INSET = 3  # px kept clear between a date-flag label and the strip's
 _LABEL_GAP = 4  # px kept clear between the two date-flag labels when they'd otherwise overlap
 _LABEL_TOP = 2  # px between a date-flag label and the top of the strip
 _CAP_MARGIN_START = 6  # px; must match .tz-cell.cap-start margin-left in style.css
+_LINE_WIDTH = 2  # px; the now/scrub cursors are both this wide
 
 # The strip is exactly _COLUMNS equal cells (see model.COLUMNS for why that
 # count never varies). Cell C is the one-hour block [C, C+1) of the reference
@@ -34,6 +35,27 @@ def _column_x(column: int, total_width: int) -> int:
     """
     base, extra = divmod(total_width, _COLUMNS)
     return column * base + min(column, extra)
+
+
+def _clamp(value: int, maximum: int) -> int:
+    return max(0, min(maximum, value))
+
+
+def _fractional_column_x(column: float, total_width: int) -> float:
+    """Where a (possibly fractional) hour lands across the strip.
+
+    Each cell is the whole one-hour block [C, C+1), so how far into the hour an
+    instant is, is how far across its cell it draws. Interpolating between the
+    two real seams rather than scaling `column / 24 * width` keeps it on the
+    grid GTK actually laid out, including the leftover pixels _column_x hands
+    to the first few columns. (24.0 lands on the trailing edge of the last
+    cell, not on a 25th one.)
+    """
+    column = max(0.0, min(float(_COLUMNS), column))
+    col = min(_COLUMNS - 1, int(column))
+    left = _column_x(col, total_width)
+    right = _column_x(col + 1, total_width)
+    return left + (right - left) * (column - col)
 
 
 def _flag_positions(
@@ -159,6 +181,104 @@ class _DateFlagLayer(Gtk.Widget):
         Gtk.Widget.do_dispose(self)
 
 
+class _CursorLayer(Gtk.Widget):
+    """The layer both vertical cursors are painted on, above every cell.
+
+    - the ambient "now" line: quiet, dashed.
+    - the scrub line: solid, prominent, tracking the pointer or the pinned
+      preview instant.
+
+    Both live inside the strip rather than on the window-wide overlay so they
+    can only ever cross hours: stacked, a strip is one band of a taller row,
+    and a line drawn over the whole list ran straight through the city name,
+    the clock and the kebab above it. The scrub's pill stays on the overlay —
+    it is a label that has to be legible and clickable outside the strips.
+
+    Same custom-allocation reasoning as _DateFlagLayer: owning size_allocate
+    means the lines are placed by the very pass that resizes the strip, so they
+    land on the same seams the cells do at every width, in the same frame.
+    """
+
+    __gtype_name__ = "TimezonesCursorLayer"
+
+    def __init__(self):
+        super().__init__()
+        self.set_can_target(False)
+        self._now_column: float | None = None
+        self._scrub_column: float | None = None
+
+        self._now_line = Gtk.Box()
+        self._now_line.add_css_class("tz-now-line")
+
+        # Parented last, so the scrub draws over the now-line where the two
+        # coincide — the scrub is the one the user is actively pointing at.
+        self._scrub_line = Gtk.Box()
+        self._scrub_line.add_css_class("tz-scrub-line")
+
+        for child in (self._now_line, self._scrub_line):
+            child.set_parent(self)
+            # Nothing to mark until set_now/set_scrub says otherwise, and an
+            # unallocated visible child is one GTK complains about.
+            child.set_child_visible(False)
+
+    def set_now(self, column: float | None) -> None:
+        if column == self._now_column:
+            return
+        self._now_column = column
+        self._requeue()
+
+    def set_scrub(self, column: float | None) -> None:
+        if column == self._scrub_column:
+            return
+        self._scrub_column = column
+        self._requeue()
+
+    def _requeue(self) -> None:
+        # Allocate, not resize: nothing about this layer's size depends on
+        # where the lines sit, and they move on every tick and every motion
+        # event.
+        self.queue_allocate()
+
+    def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
+        sized = width > 0 and height > 0
+        now = self._now_column if sized else None
+        scrub = self._scrub_column if sized else None
+
+        self._now_line.set_child_visible(now is not None)
+        self._scrub_line.set_child_visible(scrub is not None)
+
+        if now is not None:
+            self._allocate_line(self._now_line, _fractional_column_x(now, width), width, height)
+
+        if scrub is not None:
+            self._allocate_line(self._scrub_line, _fractional_column_x(scrub, width), width, height)
+
+    @classmethod
+    def _allocate_line(cls, line: Gtk.Widget, x: float, width: int, height: int) -> None:
+        # Centered on the seam, then pulled inside the strip at either end:
+        # the layer is clipped, so a line at midnight or at 24:00 would
+        # otherwise lose half its width to the edge.
+        cls._allocate(line, _clamp(round(x) - 1, width - _LINE_WIDTH), 0, _LINE_WIDTH, height)
+
+    @staticmethod
+    def _allocate(child: Gtk.Widget, x: int, y: int, width: int, height: int) -> None:
+        # Field-by-field, as in _DateFlagLayer: Gdk.Rectangle is a boxed
+        # struct whose constructor silently ignores the fields passed to it.
+        rect = Gdk.Rectangle()
+        rect.x, rect.y, rect.width, rect.height = x, y, width, height
+        child.size_allocate(rect, -1)
+
+    def do_dispose(self) -> None:
+        # See _DateFlagLayer.do_dispose: a plain Gtk.Widget keeps its children
+        # parented until told otherwise, and finalizing with them still
+        # attached warns.
+        for child in (self._now_line, self._scrub_line):
+            if child is not None:
+                child.unparent()
+        self._now_line = self._scrub_line = None
+        Gtk.Widget.do_dispose(self)
+
+
 class TimelineStrip(Gtk.Overlay):
     __gtype_name__ = "TimezonesTimelineStrip"
 
@@ -193,7 +313,22 @@ class TimelineStrip(Gtk.Overlay):
         # than as scribble on an unrelated control.
         self.set_clip_overlay(self._decor_layer, True)
 
+        # Above the pills: the two cursors are the marks that have to stay
+        # readable whatever else the strip is showing. Clipped for the same
+        # reason — neither may reach the row's menu button.
+        self._cursor_layer = _CursorLayer()
+        self.add_overlay(self._cursor_layer)
+        self.set_clip_overlay(self._cursor_layer, True)
+
         self._cell_widgets: list[Gtk.Widget] = [None] * _COLUMNS  # type: ignore[list-item]
+
+    def set_now(self, column: float | None) -> None:
+        """Draw (or hide) the ambient now-line at `column` hours into the day."""
+        self._cursor_layer.set_now(column)
+
+    def set_scrub(self, column: float | None) -> None:
+        """Draw (or hide) the scrub line at `column` hours into the day."""
+        self._cursor_layer.set_scrub(column)
 
     def get_cell_widget(self, column: int) -> Gtk.Widget | None:
         # Used by the shared now-line/scrub-line overlay to find where a

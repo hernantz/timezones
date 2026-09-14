@@ -20,7 +20,6 @@ install_data(
   'src/persistence.py',
   'src/tzinfo_helpers.py',
   'src/timeline.py',
-  'src/cursor_overlay.py',
   'src/row.py',
   'src/add_dialog.py',
   'src/preferences.py',

@@ -3,16 +3,16 @@ from __future__ import annotations
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango
 
 from . import tzinfo_helpers as tzinfo
 from .add_dialog import AddTimezoneDialog
-from .cursor_overlay import TimelineCursorOverlay
 from .date_popover import DatePopover
 from .model import City, ClockModel
 from .persistence import Settings, load_cities, save_cities
 from .preferences import PreferencesDialog
 from .row import TimezoneRow
+from .timeline import TimelineStrip
 
 _SCRUB_STEP = 0.25  # 15 minutes, matches _snap_column()
 _MAX_COLUMN = 24.0 - _SCRUB_STEP  # 23:45 — last snappable slot still inside the day
@@ -122,7 +122,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._banner.connect("button-clicked", self._on_banner_jump_today)
         toolbar_view.add_top_bar(self._banner)
 
-        overlay = Gtk.Overlay()
+        toolbar_view.add_top_bar(self._build_selection_bar())
+
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_vexpand(True)
         scrolled.set_hexpand(True)
@@ -151,14 +152,9 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         clamp.set_child(self._list_box)
         scrolled.set_child(clamp)
 
-        overlay.set_child(scrolled)
-        self._cursor = TimelineCursorOverlay()
-        self._cursor.connect("unpin-requested", self._on_unpin_requested)
-        overlay.add_overlay(self._cursor)
-
         self._content_stack = Gtk.Stack()
         self._content_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        self._content_stack.add_named(overlay, "list")
+        self._content_stack.add_named(scrolled, "list")
         self._content_stack.add_named(self._build_empty_state(), "empty")
 
         toolbar_view.set_content(self._content_stack)
@@ -198,6 +194,42 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         while row is not None:
             row.set_narrow(narrow)
             row = row.get_next_sibling()
+
+    def _build_selection_bar(self) -> Gtk.Widget:
+        """The bar that names the instant the timeline is parked on.
+
+        A top bar rather than a marker floating over the strips: the reading is
+        wanted *while* comparing rows, and every row already shows its own
+        local time for that instant — what the list can't say for itself is
+        which instant is being previewed and how to get back out of it. Sits
+        with the "Viewing <date>" banner above it, and reads the same way: a
+        statement about what the whole list is currently showing.
+        """
+        self._selection_label = Gtk.Label()
+        self._selection_label.add_css_class("tz-selection-text")
+        self._selection_label.set_ellipsize(Pango.EllipsizeMode.END)
+
+        close = Gtk.Button()
+        close.add_css_class("tz-selection-close")
+        close.add_css_class("flat")
+        close.add_css_class("circular")
+        close.set_icon_name("window-close-symbolic")
+        close.set_tooltip_text("Back to now")
+        close.set_valign(Gtk.Align.CENTER)
+        close.connect("clicked", self._on_unpin_requested)
+
+        bar = Gtk.CenterBox()
+        bar.add_css_class("tz-selection-bar")
+        bar.set_center_widget(self._selection_label)
+        bar.set_end_widget(close)
+
+        # Revealed rather than merely hidden, so the list slides down to make
+        # room the way it does for the date banner instead of jumping.
+        self._selection_bar = Gtk.Revealer()
+        self._selection_bar.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
+        self._selection_bar.set_child(bar)
+        self._selection_bar.set_reveal_child(False)
+        return self._selection_bar
 
     def _build_empty_state(self) -> Gtk.Widget:
         status = Adw.StatusPage()
@@ -274,8 +306,6 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             row.set_compact(self._compact_rows)
             self._list_box.append(row)
 
-        first_row = self._list_box.get_first_child()
-        self._cursor.set_anchor(first_row.get_timeline() if first_row else None)
         self._update_empty_state()
         self._grid_date = self._current_grid_date()
         self._update_cursor_display()
@@ -320,15 +350,58 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
     # -- Now-line / hover-scrub cursor -----------------------------------------
 
-    def _anchor_timeline(self):
-        first_row = self._list_box.get_first_child()
-        return first_row.get_timeline() if first_row else None
+    def _update_now_line(self, column: float | None) -> None:
+        """Hand the now-line to every row's own strip, so it can only ever
+        cross hours — never the name, clock and kebab a stacked row puts above
+        its strip."""
+        row = self._list_box.get_first_child()
+        while row is not None:
+            row.set_now(column)
+            row = row.get_next_sibling()
 
-    def _column_fraction_for_x(self, x: float) -> float | None:
-        anchor = self._anchor_timeline()
-        if anchor is None:
+    def _update_scrub_line(self, column: float | None) -> None:
+        """Same for the scrub line — the overlay keeps only its pill."""
+        row = self._list_box.get_first_child()
+        while row is not None:
+            row.set_scrub(column)
+            row = row.get_next_sibling()
+
+    def _update_selection_bar(self, instant: datetime | None) -> None:
+        ref = self._model.reference
+        if instant is None or ref is None:
+            self._selection_bar.set_reveal_child(False)
+            return
+        # The reference zone's reading, like every other number the timeline
+        # is keyed to — each row states the same instant in its own terms
+        # just below.
+        local = tzinfo.local_now(ref.tz, instant)
+        time_text = local.strftime("%H:%M") if self._fmt_24h else local.strftime("%-I:%M %p")
+        self._selection_label.set_label(f"{local.strftime('%a, %b %-d')} · {time_text}")
+        self._selection_bar.set_reveal_child(True)
+
+    def _timeline_at(self, x: float, y: float) -> TimelineStrip | None:
+        """The strip under the pointer, or None when it is anywhere else.
+
+        Asking the widget tree, rather than testing the x range against the
+        first strip: every strip spans the same columns, so an x test alone
+        says "which hour" but never "an hour at all". Stacked, the name, the
+        clock and the kebab sit directly above their own strip and share its
+        x range — reading a time off them is meaningless, so the pointer
+        crossing them must leave the scrub where it was rather than drag it
+        along.
+        """
+        widget = self._list_box.pick(x, y, Gtk.PickFlags.DEFAULT)
+        while widget is not None and widget is not self._list_box:
+            if isinstance(widget, TimelineStrip):
+                return widget
+            widget = widget.get_parent()
+        return None
+
+    def _column_fraction_at(self, x: float, y: float) -> float | None:
+        strip = self._timeline_at(x, y)
+        if strip is None:
             return None
-        ok, rect = anchor.compute_bounds(self._list_box)
+        ok, rect = strip.compute_bounds(self._list_box)
         if not ok or rect.size.width <= 0:
             return None
         local_x = x - rect.origin.x
@@ -350,10 +423,12 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         is_today = self._viewing_date is None or self._viewing_date == date.today()
         ref = self._model.reference
 
-        if is_today and ref is not None:
-            self._cursor.update_now(self._model.now_column(datetime.now().astimezone()), True)
-        else:
-            self._cursor.update_now(0.0, False)
+        now_column = (
+            self._model.now_column(datetime.now().astimezone())
+            if is_today and ref is not None
+            else None
+        )
+        self._update_now_line(now_column)
 
         # Once pinned, further hovering does NOT move the preview — otherwise
         # the pinned pill (and its "back to now" button) would jump away the
@@ -367,19 +442,23 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             active_column = self._hover_column
 
         if active_column is None or ref is None:
-            self._cursor.update_scrub(0.0, False, False)
+            self._update_scrub_line(None)
+            self._update_selection_bar(None)
             self._refresh_rows()
             return
 
         snapped = self._snap_column(active_column)
         instant = self._instant_for_column(snapped)
-        local = tzinfo.local_now(ref.tz, instant)
-        text = local.strftime("%H:%M") if self._fmt_24h else local.strftime("%-I:%M %p")
-        self._cursor.update_scrub(active_column, True, self._pinned, text)
+        self._update_scrub_line(active_column)
+        # Only a parked instant gets the bar. A hover is already fully told by
+        # the line and the row times moving under the pointer, and a bar that
+        # appeared and vanished with every pass of the mouse would shove the
+        # whole list up and down as it went.
+        self._update_selection_bar(instant if self._pinned else None)
         self._refresh_preview_rows(instant)
 
-    def _on_timeline_motion(self, _controller, x: float, _y: float) -> None:
-        fraction = self._column_fraction_for_x(x)
+    def _on_timeline_motion(self, _controller, x: float, y: float) -> None:
+        fraction = self._column_fraction_at(x, y)
         self._hovering = fraction is not None
         if fraction is not None:
             self._hover_column = fraction
@@ -389,8 +468,10 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._hovering = False
         self._update_cursor_display()
 
-    def _on_timeline_click(self, _gesture, _n_press: int, x: float, _y: float) -> None:
-        fraction = self._column_fraction_for_x(x)
+    def _on_timeline_click(self, _gesture, _n_press: int, x: float, y: float) -> None:
+        # Same rule as the hover: a click on a row's name or clock is not a
+        # click on an hour, so it parks nothing.
+        fraction = self._column_fraction_at(x, y)
         if fraction is None:
             return
         self._pinned = True

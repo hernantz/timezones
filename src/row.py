@@ -414,8 +414,11 @@ class TimezoneRow(Gtk.Box):
         if differs:
             self._date_label.add_css_class("accent")
 
-    def get_timeline(self) -> TimelineStrip:
-        return self._timeline
+    def set_now(self, column: float | None) -> None:
+        self._timeline.set_now(column)
+
+    def set_scrub(self, column: float | None) -> None:
+        self._timeline.set_scrub(column)
 
     def _drag_icon(self) -> Gdk.Paintable:
         """A *frozen* picture of this row, for the card that follows the cursor.
