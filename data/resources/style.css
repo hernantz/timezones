@@ -442,19 +442,10 @@ headerbar.tz-headerbar .title {
   color: #ffffff;
 }
 
-.tz-jump-today {
+.tz-today-btn {
   color: #3584e4;
   font-weight: 700;
   font-size: 12px;
-}
-
-.tz-viewing-banner {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #1c71d8;
-  background-color: #e3edfb;
-  border-radius: 8px;
-  padding: 4px 10px;
 }
 
 /* =======================================================================
@@ -613,11 +604,6 @@ window.tz-window.dark .tz-swatch-label.selected {
 
 window.tz-window.dark .tz-results-label {
   color: #7b7b8c;
-}
-
-window.tz-window.dark .tz-viewing-banner {
-  color: #8ab4f8;
-  background-color: #28405f;
 }
 
 window.tz-window.dark .tz-selection-bar {

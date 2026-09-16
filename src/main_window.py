@@ -104,6 +104,17 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._date_btn.set_popover(self._date_popover)
         header.pack_start(self._date_btn)
 
+        # Only an escape hatch: hidden while the window already shows today,
+        # so it reads as "you are somewhere else" rather than as a permanent
+        # control.
+        self._today_btn = Gtk.Button(label="Today")
+        self._today_btn.set_tooltip_text("Back to Today")
+        self._today_btn.add_css_class("flat")
+        self._today_btn.add_css_class("tz-today-btn")
+        self._today_btn.set_visible(False)
+        self._today_btn.connect("clicked", self._on_jump_today)
+        header.pack_start(self._today_btn)
+
         self._fmt_group = Adw.ToggleGroup()
         toggle_24 = Adw.Toggle(name="24h", label="24h")
         toggle_12 = Adw.Toggle(name="12h", label="12h")
@@ -115,11 +126,6 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         header.pack_end(self._fmt_group)
 
         toolbar_view.add_top_bar(header)
-
-        self._banner = Adw.Banner()
-        self._banner.set_button_label("Jump to Today")
-        self._banner.connect("button-clicked", self._on_banner_jump_today)
-        toolbar_view.add_top_bar(self._banner)
 
         toolbar_view.add_top_bar(self._build_selection_bar())
 
@@ -307,7 +313,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._update_empty_state()
         self._grid_date = self._current_grid_date()
         self._update_cursor_display()
-        self._update_banner()
+        self._update_today_btn()
 
     def _update_empty_state(self) -> None:
         empty = not self._model.cities
@@ -514,13 +520,9 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._hovering = False
         self._update_cursor_display()
 
-    def _update_banner(self) -> None:
-        if self._viewing_date is None or self._viewing_date == date.today():
-            self._banner.set_revealed(False)
-        else:
-            label = self._viewing_date.strftime("%a, %b %-d")
-            self._banner.set_title(f"Viewing {label}")
-            self._banner.set_revealed(True)
+    def _update_today_btn(self) -> None:
+        away = self._viewing_date is not None and self._viewing_date != date.today()
+        self._today_btn.set_visible(away)
 
     def _persist(self) -> None:
         save_cities(self._model.cities)
@@ -552,8 +554,9 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._viewing_date = None if picked == date.today() else picked
         self._rebuild_rows()
 
-    def _on_banner_jump_today(self, *_args) -> None:
+    def _on_jump_today(self, *_args) -> None:
         self._viewing_date = None
+        self._date_popover.reset_to_today()
         self._rebuild_rows()
 
     def _on_fmt_toggled(self, group: Adw.ToggleGroup, _pspec) -> None:

@@ -69,13 +69,6 @@ class DatePopover(Gtk.Popover):
         self._grid.set_column_homogeneous(True)
         root.append(self._grid)
 
-        today_link = Gtk.Button(label="Jump to Today")
-        today_link.add_css_class("flat")
-        today_link.add_css_class("tz-jump-today")
-        today_link.set_halign(Gtk.Align.CENTER)
-        today_link.connect("clicked", self._on_jump_today)
-        root.append(today_link)
-
         self.set_child(root)
         self._render()
 
@@ -85,12 +78,16 @@ class DatePopover(Gtk.Popover):
         self._view_month = month % 12 + 1
         self._render()
 
-    def _on_jump_today(self, *_args) -> None:
+    def reset_to_today(self) -> None:
+        """Re-center the calendar on today, for when something outside the
+        popover (the header's Today button) takes the window back there —
+        otherwise reopening it would still highlight the date just left.
+        """
+        self._today = date.today()
         self._selected = self._today
         self._view_year = self._today.year
         self._view_month = self._today.month
         self._render()
-        self.emit("date-selected", self._selected.year, self._selected.month, self._selected.day)
 
     def _select(self, d: date) -> None:
         self._selected = d
