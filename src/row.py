@@ -34,7 +34,6 @@ class TimezoneRow(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.city = city
         self._narrow = False
-        self._compact = False
 
         # A row is sized by its own content and nothing else: it never takes a
         # share of the window's spare height, so a taller window reveals more
@@ -256,35 +255,6 @@ class TimezoneRow(Gtk.Box):
             self._identity.set_size_request(180, -1)
             self._identity.set_hexpand(False)
             self._head.set_margin_bottom(0)
-
-    def set_compact(self, compact: bool) -> None:
-        """The second, opt-in row height — never an automatic response to how
-        many rows exist. Identity collapses to one line and the vertical
-        padding is trimmed; the timeline's own minimum sizes are untouched, so
-        a compact row is short, not degraded.
-        """
-        if compact == self._compact:
-            return
-        self._compact = compact
-
-        pad = 7 if compact else 14
-        for block in (self._identity, self._time_block):
-            block.set_margin_top(pad)
-            block.set_margin_bottom(pad)
-
-        # The chip rides beside the city name instead of below the subtitle,
-        # which is what makes the single line possible at all for a labelled row.
-        self._chip.get_parent().remove(self._chip)
-        if compact:
-            self._card.add_css_class("compact")
-            self._subtitle_label.set_visible(False)
-            self._chip.set_margin_top(0)
-            self._name_line.append(self._chip)
-        else:
-            self._card.remove_css_class("compact")
-            self._subtitle_label.set_visible(True)
-            self._chip.set_margin_top(2)
-            self._identity.append(self._chip)
 
     def set_move_enabled(self, up: bool, down: bool) -> None:
         self._move_up_action.set_enabled(up)

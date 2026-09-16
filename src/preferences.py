@@ -13,7 +13,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
         "fmt-24h-changed": (GObject.SignalFlags.RUN_FIRST, None, (bool,)),
         "show-offsets-changed": (GObject.SignalFlags.RUN_FIRST, None, (bool,)),
         "show-daynight-changed": (GObject.SignalFlags.RUN_FIRST, None, (bool,)),
-        "compact-rows-changed": (GObject.SignalFlags.RUN_FIRST, None, (bool,)),
         "reorder-requested": (GObject.SignalFlags.RUN_FIRST, None, ()),
     }
 
@@ -24,7 +23,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
         fmt_24h: bool,
         show_offsets: bool,
         show_daynight: bool,
-        compact_rows: bool,
     ):
         super().__init__()
         self.set_search_enabled(False)
@@ -33,7 +31,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         page.add(self._build_appearance_group(theme_mode))
         page.add(self._build_time_format_group(fmt_24h))
-        page.add(self._build_view_options_group(show_offsets, show_daynight, compact_rows))
+        page.add(self._build_view_options_group(show_offsets, show_daynight))
 
     # -- Appearance -------------------------------------------------------
 
@@ -156,9 +154,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
     # -- View options ---------------------------------------------------------
 
-    def _build_view_options_group(
-        self, show_offsets: bool, show_daynight: bool, compact_rows: bool
-    ) -> Adw.PreferencesGroup:
+    def _build_view_options_group(self, show_offsets: bool, show_daynight: bool) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(title="View options")
 
         offsets_row = Adw.SwitchRow(title="Show UTC offsets")
@@ -170,11 +166,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
         daynight_row.set_active(show_daynight)
         daynight_row.connect("notify::active", lambda r, _p: self.emit("show-daynight-changed", r.get_active()))
         group.add(daynight_row)
-
-        compact_row = Adw.SwitchRow(title="Compact rows")
-        compact_row.set_active(compact_rows)
-        compact_row.connect("notify::active", lambda r, _p: self.emit("compact-rows-changed", r.get_active()))
-        group.add(compact_row)
 
         reorder_row = Adw.ActionRow(title="Reorder timezones")
         reorder_row.set_activatable(True)

@@ -50,7 +50,6 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._fmt_24h = self._settings.get_bool("fmt-24h", False)
         self._show_offsets = self._settings.get_bool("show-offsets", True)
         self._show_daynight = self._settings.get_bool("show-daynight", True)
-        self._compact_rows = self._settings.get_bool("compact-rows", False)
         self._viewing_date: date | None = None
         self._preferences: PreferencesDialog | None = None
 
@@ -303,7 +302,6 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             row.set_move_enabled(i > 0, i < n - 1)
             row.update(self._model, self._fmt_24h, self._show_offsets, self._show_daynight, at)
             row.set_narrow(self._narrow)
-            row.set_compact(self._compact_rows)
             self._list_box.append(row)
 
         self._update_empty_state()
@@ -639,13 +637,11 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             fmt_24h=self._fmt_24h,
             show_offsets=self._show_offsets,
             show_daynight=self._show_daynight,
-            compact_rows=self._compact_rows,
         )
         dialog.connect("theme-changed", self._on_theme_changed)
         dialog.connect("fmt-24h-changed", self._on_prefs_fmt_changed)
         dialog.connect("show-offsets-changed", self._on_show_offsets_changed)
         dialog.connect("show-daynight-changed", self._on_show_daynight_changed)
-        dialog.connect("compact-rows-changed", self._on_compact_rows_changed)
         dialog.connect("reorder-requested", self._on_reorder_requested)
         self._preferences = dialog
         dialog.connect("closed", lambda *_a: setattr(self, "_preferences", None))
@@ -766,10 +762,3 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._settings.set_bool("show-daynight", value)
         self._rebuild_rows()
 
-    def _on_compact_rows_changed(self, _dialog: PreferencesDialog, value: bool) -> None:
-        self._compact_rows = value
-        self._settings.set_bool("compact-rows", value)
-        row = self._list_box.get_first_child()
-        while row is not None:
-            row.set_compact(value)
-            row = row.get_next_sibling()

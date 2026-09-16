@@ -21,10 +21,5 @@
       <default>true</default>
       <summary>Show day / night colors on timeline cells</summary>
     </key>
-
-    <key name="compact-rows" type="b">
-      <default>false</default>
-      <summary>Use a denser row height</summary>
-    </key>
   </schema>
 </schemalist>

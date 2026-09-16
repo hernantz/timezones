@@ -635,7 +635,7 @@ window.tz-window.dark .tz-empty-state .description {
   color: #a7a7b8;
 }
 
-/* ---- Row states: stacked (narrow) and compact --------------------------- */
+/* ---- Row states: stacked (narrow) ---------------------------------------- */
 
 /* The stacked state, chosen by the window's breakpoint — a narrow desktop
    window and a phone get the same thing. The timeline no longer borrows its
@@ -648,10 +648,3 @@ window.tz-window.dark .tz-empty-state .description {
   padding-right: 0;
 }
 
-/* Compact: the opt-in second height. Only vertical rhythm changes — the
-   timeline's own minimums (date pills, sun/moon markers, the 8px type floor)
-   are untouched, which is exactly why this is a switch and not something the
-   app does on its own as rows pile up. */
-.tz-row.compact .tz-city-name {
-  font-size: 14.5px;
-}
