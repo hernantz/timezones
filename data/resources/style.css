@@ -583,6 +583,17 @@ window.tz-window.dark .tz-flag {
   border-color: #4c4c5e;
 }
 
+/* Restated for dark rather than inherited from `.tz-flag.accent`: the two
+   rules above are more specific than it, so without this the accented pill
+   loses its fill and reads exactly like a plain one. Kept at full strength
+   for the same reason the transition cell is — it is a marker that has to
+   carry across the strip's tints, not a surface to be toned down. */
+window.tz-window.dark .tz-flag.accent {
+  color: #ffffff;
+  background-color: #3584e4;
+  border-color: #1c71d8;
+}
+
 window.tz-window.dark .tz-chip {
   color: #8ab4f8;
   background-color: #28405f;

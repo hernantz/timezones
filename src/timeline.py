@@ -357,6 +357,9 @@ class TimelineStrip(Gtk.Overlay):
         boundary_flag: Gtk.Widget | None = None
         boundary = model.boundary_column(city, at)
         dst_columns = {column for column, _ in (transitions or ())}
+        # The strip spans exactly the reference zone's day, so the reference
+        # date is the same at every column — one comparison serves both pills.
+        reference_date = model.reference_midnight(at).date()
 
         day_flags = [
             tzinfo.is_daylight(city.tz, model.column_instant(c, at)) for c in range(_COLUMNS)
@@ -373,13 +376,16 @@ class TimelineStrip(Gtk.Overlay):
             local_dt = model.column_instant(col, at)
             flag_text = None
             flag_accent = False
-            if col == 0:
+            if col == 0 or col == boundary:
                 row_dt = tzinfo.local_now(city.tz, local_dt)
                 flag_text = f"{_WEEKDAY[row_dt.weekday()]} {row_dt.day}"
-            elif col == boundary:
-                row_dt = tzinfo.local_now(city.tz, local_dt)
-                flag_text = f"{_WEEKDAY[row_dt.weekday()]} {row_dt.day}"
-                flag_accent = True
+                # Accented when the day this pill names is not the reference's
+                # day, matching the row's date label: the highlight marks a
+                # date the reader can't assume, not a particular pill. A row
+                # behind the reference therefore accents its opening pill
+                # (yesterday, there) and leaves the rollover plain; a row ahead
+                # does the reverse.
+                flag_accent = row_dt.date() != reference_date
 
             cell, flag = self._make_cell(
                 hour_label=_hour_label(model.local_hour_at_column(city, col, at), fmt_24h),
@@ -396,10 +402,10 @@ class TimelineStrip(Gtk.Overlay):
             self._cell_widgets[col] = cell
             self._row.attach(cell, col, 0, 1, 1)
             if flag is not None:
-                if flag_accent:
-                    boundary_flag = flag
-                else:
+                if col == 0:
                     start_flag = flag
+                else:
+                    boundary_flag = flag
 
         self._decor_layer.set_flags(start_flag, boundary_flag, boundary)
 
