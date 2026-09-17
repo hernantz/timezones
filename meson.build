@@ -15,6 +15,7 @@ install_data(
 
 install_data(
   'src/__init__.py',
+  'src/app.py',
   'src/main_window.py',
   'src/model.py',
   'src/persistence.py',

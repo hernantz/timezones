@@ -92,7 +92,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         add_btn.set_icon_name("list-add-symbolic")
         add_btn.set_tooltip_text("Add Timezone")
         add_btn.add_css_class("flat")
-        add_btn.connect("clicked", self._on_add_clicked)
+        add_btn.set_action_name("win.new")
         header.pack_start(add_btn)
 
         self._date_btn = Gtk.MenuButton()
@@ -112,7 +112,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._today_btn.add_css_class("flat")
         self._today_btn.add_css_class("tz-today-btn")
         self._today_btn.set_visible(False)
-        self._today_btn.connect("clicked", self._on_jump_today)
+        self._today_btn.set_action_name("win.today")
         header.pack_start(self._today_btn)
 
         self._fmt_group = Adw.ToggleGroup()
@@ -180,6 +180,23 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         key.connect("key-pressed", self._on_timeline_key)
         self._list_box.add_controller(key)
 
+        # Escape discards the selection wherever focus happens to be. The
+        # controller above only sees keys while the list itself has focus, and
+        # after picking a date focus sits on the calendar button instead — so
+        # the one key whose whole job is "get me out of this" was unreachable
+        # exactly when a selection had outlived a date jump. Global scope puts
+        # it on the window; popovers and dialogs are their own roots, so their
+        # own Escape (close me) still runs first.
+        escape = Gtk.ShortcutController()
+        escape.set_scope(Gtk.ShortcutScope.GLOBAL)
+        escape.add_shortcut(
+            Gtk.Shortcut(
+                trigger=Gtk.ShortcutTrigger.parse_string("Escape"),
+                action=Gtk.CallbackAction.new(self._on_escape),
+            )
+        )
+        self.add_controller(escape)
+
     def _install_breakpoint(self) -> None:
         """One breakpoint decides which state every row is in — whether the
         narrowness comes from a phone or from someone dragging the window in."""
@@ -219,7 +236,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         close.add_css_class("flat")
         close.add_css_class("circular")
         close.set_icon_name("window-close-symbolic")
-        close.set_tooltip_text("Back to now")
+        close.set_tooltip_text("Discard selected time")
         close.set_valign(Gtk.Align.CENTER)
         close.connect("clicked", self._on_unpin_requested)
 
@@ -265,6 +282,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
     def _install_actions(self) -> None:
         for name, cb in (
+            ("new", self._on_add_clicked),
+            ("today", self._on_jump_today),
             ("preferences", self._on_preferences),
             ("shortcuts", self._on_shortcuts),
             ("about", self._on_about),
@@ -272,6 +291,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", cb)
             self.add_action(action)
+            if name == "today":
+                self._today_action = action
 
     # -- Row management -------------------------------------------------------
 
@@ -478,6 +499,12 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         fraction = self._column_fraction_at(x, y)
         if fraction is None:
             return
+        # Parking on an hour is the same intent as tabbing in, so the keyboard
+        # scrub should be live straight afterwards: the arrow/Enter controller
+        # only sees keys while the list holds focus, and nothing else ever
+        # gives it focus. Past the early return above, so a click on a row's
+        # name or kebab still doesn't pull focus.
+        self._list_box.grab_focus()
         self._pinned = True
         self._pinned_column = self._snap_column(fraction)
         self._update_cursor_display()
@@ -499,13 +526,15 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             self._pinned_column = self._snap_column(self._hover_column)
             self._update_cursor_display()
             return True
-        if keyval == Gdk.KEY_Escape:
-            self._hovering = False
-            self._pinned = False
-            self._pinned_column = None
-            self._update_cursor_display()
-            return True
         return False
+
+    def _on_escape(self, _widget, _args) -> bool:
+        """Only claims the key when there is something to discard, so Escape
+        keeps its usual meaning everywhere else in the window."""
+        if not (self._pinned or self._hovering):
+            return False
+        self._on_unpin_requested()
+        return True
 
     def _on_unpin_requested(self, *_args) -> None:
         # "Back to now" is a full reset, not just a pin release: the pointer
@@ -523,6 +552,9 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _update_today_btn(self) -> None:
         away = self._viewing_date is not None and self._viewing_date != date.today()
         self._today_btn.set_visible(away)
+        # Disabling it too, so Ctrl+T while already on today is a no-op rather
+        # than a pointless full rebuild of every row.
+        self._today_action.set_enabled(away)
 
     def _persist(self) -> None:
         save_cities(self._model.cities)
@@ -653,7 +685,12 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _on_shortcuts(self, *_args) -> None:
         dialog = Adw.AlertDialog(
             heading="Keyboard Shortcuts",
-            body="Add timezone: Ctrl+N\nPreferences: Ctrl+,\nQuit: Ctrl+Q",
+            body=(
+                "Add timezone: Ctrl+N\n"
+                "Back to today: Ctrl+T\n"
+                "Preferences: Ctrl+,\n"
+                "Quit: Ctrl+Q"
+            ),
         )
         dialog.add_response("ok", "Close")
         dialog.present(self)

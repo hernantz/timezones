@@ -37,6 +37,12 @@ class AddTimezoneDialog(Adw.Dialog):
         self._search.add_css_class("tz-search-entry")
         self._search.set_placeholder_text("Search for a city or timezone")
         self._search.connect("search-changed", self._on_search_changed)
+        # Escape would otherwise be dead here: the entry has a class binding
+        # of Escape to stop-search, which sits below the dialog's own close
+        # binding in the focus chain and reports the key as handled, so the
+        # dialog never sees it — and stop-search does nothing by default. This
+        # dialog *is* the search, so stopping it means dismissing the dialog.
+        self._search.connect("stop-search", lambda *_a: self.close())
         body.append(self._search)
 
         self._results_label = Gtk.Label(label="RESULTS", xalign=0)
