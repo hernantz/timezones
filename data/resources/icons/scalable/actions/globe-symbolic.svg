@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-<circle cx="12" cy="12" r="9" fill="none" stroke="#2e3436" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 3a4.2 9 0 0 1 0 18a4.2 9 0 0 1 0-18" fill="none" stroke="#2e3436" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 8.5h16M4 15.5h16" fill="none" stroke="#2e3436" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- Fill-only on purpose: GTK recolors symbolic icons by forcing
+     `rect, circle, path { fill: <color> !important }` onto the SVG, which
+     overrides fill="none" and ignores stroke entirely. A stroked drawing
+     floods into a solid blob here, so every line is an explicit outline. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#2e3436">
+  <path fill-rule="evenodd" d="M2.1 12A9.9 9.9 0 0 1 21.9 12A9.9 9.9 0 0 1 2.1 12ZM3.9 12A8.1 8.1 0 0 0 20.1 12A8.1 8.1 0 0 0 3.9 12Z"/>
+  <path fill-rule="evenodd" d="M12 2.1A5.1 9.9 0 0 1 12 21.9A5.1 9.9 0 0 1 12 2.1ZM12 3.9A3.3 8.1 0 0 0 12 20.1A3.3 8.1 0 0 0 12 3.9Z"/>
+  <rect x="4" y="7.6" width="16" height="1.8" rx="0.9"/>
+  <rect x="4" y="14.6" width="16" height="1.8" rx="0.9"/>
 </svg>
