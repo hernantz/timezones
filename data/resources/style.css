@@ -85,11 +85,6 @@ headerbar.tz-headerbar .title {
   padding: 2px 9px;
 }
 
-.tz-chip.you {
-  color: #2ec27e;
-  background-color: #e3f8ee;
-}
-
 .tz-time-block {
   min-width: 96px;
   padding-right: 14px;

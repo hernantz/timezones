@@ -290,9 +290,6 @@ class TimezoneRow(Gtk.Box):
         if city.label:
             self._chip.set_label(city.label)
             self._chip.set_visible(True)
-            self._chip.remove_css_class("you")
-            if city.label.strip().lower() == "you":
-                self._chip.add_css_class("you")
         else:
             self._chip.set_visible(False)
 
