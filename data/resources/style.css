@@ -294,6 +294,22 @@ headerbar.tz-headerbar .title {
   background-color: #3584e4;
 }
 
+/* The list is one control, not a group of widgets, so it gets one focus ring
+   around the whole thing — otherwise Tab lands on it with nothing on screen
+   saying the arrow keys now scrub. `:focus-visible` keeps the ring off the
+   click path, which parks an hour and focuses the list in the same motion.
+
+   `:focus` as well, and not `:focus-visible` alone: GTK sets focus-visible on
+   the focus widget's whole ancestor chain, so the list matched while a row's
+   own kebab held focus — the ring stayed up around everything and the row
+   button looked focused at the same time. Only `:focus` is exclusive to the
+   widget that actually has it. */
+.tz-scrub-list:focus:focus-visible {
+  outline: 2px solid #3584e4;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
 /* ---- Selection bar (the parked instant, named) ---------------------------- */
 
 .tz-selection-bar {

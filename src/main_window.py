@@ -38,6 +38,35 @@ _MAX_LIST_WIDTH = 1180
 _NARROW_WIDTH = 880
 
 
+class ScrubList(Gtk.Box):
+    """The rows' container, made into a real Tab stop.
+
+    `set_focusable(True)` alone is not enough: GtkBox overrides the `focus`
+    vfunc to hand traversal straight to its children, so Tab walked over the
+    list to the row buttons inside it and the keyboard scrub was reachable
+    only by clicking an hour first. `grab_focus` is *not* delegated the same
+    way, which is why the click path worked and Tab did not.
+
+    Taking focus here first, then deferring to the normal child walk on the
+    way out, makes the whole list behave like the single control it is — the
+    same deal a GtkScale offers: focus it, then arrow along it.
+    """
+
+    def do_focus(self, direction: Gtk.DirectionType) -> bool:
+        # `get_focus_child()` is what separates arriving from leaving: GTK
+        # calls this again when focus walks back out of a row's buttons, and
+        # claiming it there too would bounce Tab between the list and its
+        # first row forever.
+        arriving = self.get_focus_child() is None and not self.is_focus()
+        tabbing = direction in (
+            Gtk.DirectionType.TAB_FORWARD,
+            Gtk.DirectionType.TAB_BACKWARD,
+        )
+        if arriving and tabbing and self.get_focusable():
+            return self.grab_focus()
+        return Gtk.Box.do_focus(self, direction)
+
+
 class TimezonesMainWindow(Adw.ApplicationWindow):
     __gtype_name__ = "TimezonesMainWindow"
 
@@ -56,6 +85,14 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._narrow = False
         self._hovering = False
         self._hover_column = 0.0
+        # The keyboard's own scrub position, deliberately not shared with the
+        # hover: arrow presses used to write `_hover_column`, so the pointer
+        # overwrote them the moment it reported a position — including the
+        # motion GTK delivers over a *stationary* pointer when the preview
+        # labels underneath it change size. None means the keyboard is not
+        # driving the cursor.
+        self._key_column: float | None = None
+        self._pointer_xy: tuple[float, float] | None = None
         self._pinned = False
         self._pinned_column: float | None = None
         self._grid_date: date | None = None
@@ -137,7 +174,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         # the rows restack rather than overflow.
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
-        self._list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self._list_box = ScrubList(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self._list_box.set_margin_top(10)
         self._list_box.set_margin_bottom(18)
         self._list_box.set_margin_start(16)
@@ -166,6 +203,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self.set_content(toolbar_view)
 
         self._list_box.set_focusable(True)
+        self._list_box.add_css_class("tz-scrub-list")
 
         motion = Gtk.EventControllerMotion()
         motion.connect("motion", self._on_timeline_motion)
@@ -463,6 +501,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         active_column = None
         if self._pinned:
             active_column = self._pinned_column
+        elif self._key_column is not None:
+            active_column = self._key_column
         elif self._hovering:
             active_column = self._hover_column
 
@@ -483,13 +523,25 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._refresh_preview_rows(instant)
 
     def _on_timeline_motion(self, _controller, x: float, y: float) -> None:
+        # A motion event at coordinates the pointer already had is not the
+        # user moving the mouse — it is the layout shifting underneath a
+        # pointer that never left. Acting on those is what let a resting
+        # pointer undo every arrow press.
+        if self._pointer_xy == (x, y):
+            return
+        self._pointer_xy = (x, y)
+
         fraction = self._column_fraction_at(x, y)
         self._hovering = fraction is not None
         if fraction is not None:
+            # A real mouse move is a handover: the pointer is the live input
+            # again and the keyboard's parked column steps aside.
+            self._key_column = None
             self._hover_column = fraction
         self._update_cursor_display()
 
     def _on_timeline_leave(self, _controller) -> None:
+        self._pointer_xy = None
         self._hovering = False
         self._update_cursor_display()
 
@@ -509,21 +561,54 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._pinned_column = self._snap_column(fraction)
         self._update_cursor_display()
 
+    def _keyboard_base_column(self) -> float:
+        """Where a keypress acts from, in falling order of how deliberate the
+        source is: the keyboard's own column, then a parked selection, then the
+        pointer, then simply now. Shared by the arrows and by Enter, so landing
+        on the list by keyboard always has a defined position — Enter used to
+        require a prior arrow press and silently declined otherwise, letting
+        the key propagate to whatever came next in the tab order."""
+        if self._key_column is not None:
+            return self._key_column
+        if self._pinned and self._pinned_column is not None:
+            return self._pinned_column
+        if self._hovering:
+            return self._hover_column
+        return self._model.now_column()
+
     def _on_timeline_key(self, _controller, keyval: int, _keycode: int, _state) -> bool:
+        # The controller is on the list, so it also sees keys bubbling up out
+        # of the rows' own buttons. Scrubbing only when the list itself holds
+        # focus keeps Enter/Space with the kebab that has it, and stops the
+        # arrows from scrubbing from a focus position that looks nothing like
+        # the timeline.
+        if not self._list_box.is_focus():
+            return False
         if keyval in (Gdk.KEY_Left, Gdk.KEY_KP_Left, Gdk.KEY_Right, Gdk.KEY_KP_Right):
-            base = (
-                self._hover_column
-                if self._hovering
-                else (self._pinned_column if self._pinned else self._model.now_column())
-            )
             step = -_SCRUB_STEP if keyval in (Gdk.KEY_Left, Gdk.KEY_KP_Left) else _SCRUB_STEP
-            self._hover_column = max(0.0, min(_MAX_COLUMN, base + step))
-            self._hovering = True
+            # Snapped first: a base inherited from the pointer or from "now" is
+            # an arbitrary fraction of an hour, and stepping from it would walk
+            # the cursor along 15-minute offsets from a ragged start. Arrow keys
+            # should land on the same quarter-hours the click path snaps to.
+            base = self._snap_column(self._keyboard_base_column())
+            column = max(0.0, min(_MAX_COLUMN, base + step))
+            if self._pinned:
+                # Keep the park, move what is parked: arrows adjust a committed
+                # selection in place rather than being ignored until it is
+                # released, so nudging a pinned time does not mean unpinning,
+                # re-scrubbing and pinning again.
+                self._pinned_column = column
+            else:
+                self._key_column = column
             self._update_cursor_display()
             return True
-        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_space) and self._hovering:
+        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_space):
+            # Always claimed: a focused control that lets Enter fall through
+            # hands it to the next widget in the tab order, which from here is
+            # a row's kebab — so Enter appeared to open a menu instead.
             self._pinned = True
-            self._pinned_column = self._snap_column(self._hover_column)
+            self._pinned_column = self._snap_column(self._keyboard_base_column())
+            self._key_column = None
             self._update_cursor_display()
             return True
         return False
@@ -531,7 +616,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _on_escape(self, _widget, _args) -> bool:
         """Only claims the key when there is something to discard, so Escape
         keeps its usual meaning everywhere else in the window."""
-        if not (self._pinned or self._hovering):
+        if not (self._pinned or self._hovering or self._key_column is not None):
             return False
         self._on_unpin_requested()
         return True
@@ -547,6 +632,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._pinned = False
         self._pinned_column = None
         self._hovering = False
+        self._key_column = None
         self._update_cursor_display()
 
     def _update_today_btn(self) -> None:
