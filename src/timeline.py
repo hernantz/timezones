@@ -295,6 +295,12 @@ class TimelineStrip(Gtk.Overlay):
         self._row.set_row_homogeneous(True)
         self._row.add_css_class("tz-timeline")
         self._row.set_hexpand(True)
+        # Clipped so the strip can be given rounded corners of its own: stacked,
+        # the grid *is* the bottom edge of the card, and the cells paint their
+        # tints right into the corner. Without this they square off the curve
+        # the card's border still draws, and the two read as two mismatched
+        # roundings sitting on top of each other.
+        self._row.set_overflow(Gtk.Overflow.HIDDEN)
         self.set_child(self._row)
 
         # Date-flag pills are painted on a layer above every cell — they

@@ -666,9 +666,27 @@ window.tz-window.dark .tz-empty-state .description {
    height from the identity block beside it, so it states its own. */
 .tz-row.narrow .tz-timeline {
   min-height: 52px;
+  /* Stacked, the strip is a band under the header line rather than a column
+     beside it, so it takes the divider the wide row draws down its left edge
+     and turns it on its side. */
+  border-top: 1px solid #e1e1e6;
+  /* 11px, not the card's 12px: the card insets its children by 1px of padding,
+     so the strip's curve sits one pixel inside the border's and the two are
+     concentric. */
+  border-bottom-left-radius: 11px;
+  border-bottom-right-radius: 11px;
 }
 
 .tz-row.narrow .tz-identity {
   padding-right: 0;
+  /* The 152px name column is a wide-window reservation; stacked, the name
+     takes what the time leaves and ellipsizes. Without this the row's minimum
+     width stayed 398px and the whole card was cut off on a phone. */
+  min-width: 0;
+}
+
+
+window.tz-window.dark .tz-row.narrow .tz-timeline {
+  border-top-color: #3d3d4d;
 }
 

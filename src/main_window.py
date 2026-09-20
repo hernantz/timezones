@@ -256,6 +256,12 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
     def _set_narrow(self, narrow: bool) -> None:
         self._narrow = narrow
+        # The format toggle is the one header control that is pure preference:
+        # it has a home in Preferences, and at phone width the bar cannot hold
+        # both it and the controls that are about *this* view. Dropping it is
+        # also what gives "Today" — which only appears when the list is parked
+        # on another date, and is the way back — room to stay a word.
+        self._fmt_group.set_visible(not narrow)
         # Narrow drops the action names and leaves their icons. The bar's own
         # reading is the one thing on it that cannot be guessed from context,
         # so it is what keeps the width when there isn't enough to go round.

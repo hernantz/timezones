@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from gi.repository import Gdk, Gio, GObject, Graphene, Gtk
+from gi.repository import Gdk, Gio, GObject, Graphene, Gtk, Pango
 
 from . import tzinfo_helpers as tzinfo
 from .model import City, ClockModel
@@ -80,17 +80,25 @@ class TimezoneRow(Gtk.Box):
         identity.set_margin_end(16)
         identity.set_valign(Gtk.Align.CENTER)
 
+        # Ellipsized, all three of them: a label's minimum width is otherwise
+        # its whole text, so one long city name or user label would set a floor
+        # the identity column cannot go under — and stacked, that floor is what
+        # pushed the row wider than a phone. Natural width is unchanged, so the
+        # wide row still shows the names in full.
         self._city_label = Gtk.Label(xalign=0)
         self._city_label.add_css_class("tz-city-name")
         self._city_label.set_halign(Gtk.Align.START)
+        self._city_label.set_ellipsize(Pango.EllipsizeMode.END)
 
         self._subtitle_label = Gtk.Label(xalign=0)
         self._subtitle_label.add_css_class("tz-subtitle")
         self._subtitle_label.set_halign(Gtk.Align.START)
+        self._subtitle_label.set_ellipsize(Pango.EllipsizeMode.END)
 
         self._chip = Gtk.Label(xalign=0)
         self._chip.add_css_class("tz-chip")
         self._chip.set_halign(Gtk.Align.START)
+        self._chip.set_ellipsize(Pango.EllipsizeMode.END)
         self._chip.set_margin_top(2)
         self._chip.set_visible(False)
 
@@ -100,6 +108,9 @@ class TimezoneRow(Gtk.Box):
         identity.append(self._name_line)
         identity.append(self._subtitle_label)
         identity.append(self._chip)
+        # The city name, not the subtitle or the chip, is what the time lines
+        # up with when the row stacks.
+        identity.set_baseline_child(0)
         self._identity = identity
         self._head.append(identity)
 
@@ -140,6 +151,7 @@ class TimezoneRow(Gtk.Box):
         time_block.append(self._time_label)
         time_block.append(self._date_label)
         time_block.append(trailer)
+        time_block.set_baseline_child(0)
         self._time_block = time_block
         self._head.append(time_block)
 
@@ -245,6 +257,14 @@ class TimezoneRow(Gtk.Box):
             self._identity.set_hexpand(True)
             self._time_block.set_hexpand(False)
             self._head.set_margin_bottom(2)
+            # Side by side on one line, the city and its time are read as a
+            # pair, so they sit on a shared baseline rather than each being
+            # centred inside its own stack: centring two columns of different
+            # heights leaves the name floating somewhere between the time and
+            # its date. The wide row has the divider and its own column widths
+            # to hold the two apart, and keeps plain centring.
+            self._identity.set_valign(Gtk.Align.BASELINE_CENTER)
+            self._time_block.set_valign(Gtk.Align.BASELINE_CENTER)
         else:
             self._head.remove(self._end_box)
             self._card.set_orientation(Gtk.Orientation.HORIZONTAL)
@@ -255,6 +275,8 @@ class TimezoneRow(Gtk.Box):
             self._identity.set_size_request(180, -1)
             self._identity.set_hexpand(False)
             self._head.set_margin_bottom(0)
+            self._identity.set_valign(Gtk.Align.CENTER)
+            self._time_block.set_valign(Gtk.Align.CENTER)
 
     def set_move_enabled(self, up: bool, down: bool) -> None:
         self._move_up_action.set_enabled(up)
