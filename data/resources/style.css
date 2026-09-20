@@ -310,7 +310,7 @@ headerbar.tz-headerbar .title {
 .tz-selection-bar {
   background-color: #e3edfb;
   border-bottom: 1px solid #cddff5;
-  padding: 5px 8px 5px 12px;
+  padding: 5px 8px;
 }
 
 .tz-selection-text {
@@ -319,14 +319,28 @@ headerbar.tz-headerbar .title {
   color: #1c71d8;
 }
 
-.tz-selection-close {
+.tz-selection-close,
+.tz-selection-action {
   min-width: 22px;
   min-height: 22px;
   padding: 0;
   color: #1c71d8;
 }
 
-.tz-selection-close:hover {
+/* A named action is a pill rather than a circle: the padding has to follow the
+   text, and `circular` would round it into a lozenge. */
+.tz-selection-action:not(.circular) {
+  padding: 1px 8px;
+  border-radius: 7px;
+}
+
+.tz-selection-action-label {
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.tz-selection-close:hover,
+.tz-selection-action:hover {
   background-color: alpha(#1c71d8, 0.12);
 }
 
@@ -623,11 +637,13 @@ window.tz-window.dark .tz-selection-bar {
 }
 
 window.tz-window.dark .tz-selection-text,
-window.tz-window.dark .tz-selection-close {
+window.tz-window.dark .tz-selection-close,
+window.tz-window.dark .tz-selection-action {
   color: #8ab4f8;
 }
 
-window.tz-window.dark .tz-selection-close:hover {
+window.tz-window.dark .tz-selection-close:hover,
+window.tz-window.dark .tz-selection-action:hover {
   background-color: alpha(#8ab4f8, 0.16);
 }
 

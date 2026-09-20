@@ -12,6 +12,7 @@ from .model import City, ClockModel
 from .persistence import Settings, load_cities, save_cities
 from .preferences import PreferencesDialog
 from .row import TimezoneRow
+from .share import EVENT_MINUTES, clipboard_text, launch_ics, write_ics
 from .timeline import TimelineStrip
 
 _SCRUB_STEP = 0.25  # 15 minutes, matches _snap_column()
@@ -83,6 +84,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._preferences: PreferencesDialog | None = None
 
         self._narrow = False
+        self._selection_action_labels: list[Gtk.Label] = []
         self._hovering = False
         self._hover_column = 0.0
         # The keyboard's own scrub position, deliberately not shared with the
@@ -199,7 +201,11 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._content_stack.add_named(scrolled, "list")
         self._content_stack.add_named(self._build_empty_state(), "empty")
 
-        toolbar_view.set_content(self._content_stack)
+        # A toast overlay around the content, not the whole toolbar view, so
+        # a toast rises over the list and never over the header bar.
+        self._toasts = Adw.ToastOverlay()
+        self._toasts.set_child(self._content_stack)
+        toolbar_view.set_content(self._toasts)
         self.set_content(toolbar_view)
 
         self._list_box.set_focusable(True)
@@ -250,6 +256,11 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
     def _set_narrow(self, narrow: bool) -> None:
         self._narrow = narrow
+        # Narrow drops the action names and leaves their icons. The bar's own
+        # reading is the one thing on it that cannot be guessed from context,
+        # so it is what keeps the width when there isn't enough to go round.
+        for label in self._selection_action_labels:
+            label.set_visible(not narrow)
         row = self._list_box.get_first_child()
         while row is not None:
             row.set_narrow(narrow)
@@ -269,17 +280,40 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._selection_label.add_css_class("tz-selection-text")
         self._selection_label.set_ellipsize(Pango.EllipsizeMode.END)
 
-        close = Gtk.Button()
-        close.add_css_class("tz-selection-close")
-        close.add_css_class("flat")
-        close.add_css_class("circular")
-        close.set_icon_name("window-close-symbolic")
-        close.set_tooltip_text("Discard selected time")
-        close.set_valign(Gtk.Align.CENTER)
-        close.connect("clicked", self._on_unpin_requested)
+        close = self._selection_button(
+            "window-close-symbolic", "Discard selected time", self._on_unpin_requested
+        )
+
+        # The two hand-offs sit at the start and the discard stays at the end:
+        # everything that *does something with* this instant on one side, the
+        # one thing that throws it away on the other, so a mis-aimed click
+        # between them costs a stray copy rather than the selection.
+        #
+        # Named rather than icon-only, unlike the close: a bare glyph is only
+        # self-evident for the action the reader already expects, and nothing
+        # about a parked hour suggests it can leave the app. The tooltips still
+        # carry the detail the labels drop (which times, how long the event).
+        actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+        actions.append(
+            self._selection_button(
+                "edit-copy-symbolic",
+                "Copy all times to the clipboard",
+                self._on_copy_selection,
+                label="Copy",
+            )
+        )
+        actions.append(
+            self._selection_button(
+                "x-office-calendar-symbolic",
+                f"Save a {EVENT_MINUTES}-minute event to your calendar",
+                self._on_calendar_selection,
+                label="Save event",
+            )
+        )
 
         bar = Gtk.CenterBox()
         bar.add_css_class("tz-selection-bar")
+        bar.set_start_widget(actions)
         bar.set_center_widget(self._selection_label)
         bar.set_end_widget(close)
 
@@ -290,6 +324,77 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._selection_bar.set_child(bar)
         self._selection_bar.set_reveal_child(False)
         return self._selection_bar
+
+    def _selection_button(
+        self, icon: str, tooltip: str, on_click, label: str | None = None
+    ) -> Gtk.Button:
+        """One control in the selection bar: circular and bare when it is only
+        an icon, a pill with its name beside it when it has one."""
+        button = Gtk.Button()
+        button.add_css_class("tz-selection-action")
+        button.add_css_class("flat")
+        button.set_tooltip_text(tooltip)
+        button.set_valign(Gtk.Align.CENTER)
+        button.connect("clicked", on_click)
+
+        if label is None:
+            button.add_css_class("circular")
+            button.set_icon_name(icon)
+            return button
+
+        text = Gtk.Label(label=label)
+        text.add_css_class("tz-selection-action-label")
+        # Kept so the narrow layout can drop back to icons: the bar's centred
+        # reading is the thing that must survive a squeeze, and two names plus
+        # a date and time do not fit a phone-width window.
+        self._selection_action_labels.append(text)
+
+        content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        content.append(Gtk.Image.new_from_icon_name(icon))
+        content.append(text)
+        button.set_child(content)
+        return button
+
+    # -- Sharing the parked instant ------------------------------------------
+
+    def _selected_instant(self) -> datetime | None:
+        """The instant the buttons act on — only ever a *parked* one.
+
+        Deliberately not `_keyboard_base_column`'s falling-back chain: those
+        buttons are only on screen while something is pinned, and a copy that
+        quietly fell back to "now" because the pin had just been discarded
+        would be wrong in a way the clipboard doesn't show you.
+        """
+        if not self._pinned or self._pinned_column is None:
+            return None
+        return self._instant_for_column(self._pinned_column)
+
+    def _on_copy_selection(self, _button: Gtk.Button) -> None:
+        instant = self._selected_instant()
+        if instant is None:
+            return
+        text = clipboard_text(self._model, instant, self._fmt_24h)
+        if not text:
+            return
+        self.get_clipboard().set(text)
+        self._toasts.add_toast(Adw.Toast.new("Times copied"))
+
+    def _on_calendar_selection(self, _button: Gtk.Button) -> None:
+        instant = self._selected_instant()
+        if instant is None:
+            return
+        try:
+            file = write_ics(self._model, instant, self._fmt_24h)
+        except OSError as error:
+            self._toasts.add_toast(Adw.Toast.new(f"Couldn't write the event: {error.strerror}"))
+            return
+        launch_ics(
+            self,
+            file,
+            lambda message: self._toasts.add_toast(
+                Adw.Toast.new(f"Couldn't open a calendar: {message}")
+            ),
+        )
 
     def _build_empty_state(self) -> Gtk.Widget:
         status = Adw.StatusPage()

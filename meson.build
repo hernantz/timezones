@@ -25,6 +25,7 @@ install_data(
   'src/add_dialog.py',
   'src/preferences.py',
   'src/date_popover.py',
+  'src/share.py',
   install_dir: join_paths(pkgdatadir, 'src')
 )
 
