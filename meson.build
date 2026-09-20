@@ -1,4 +1,10 @@
-project('timezones', version: '0.1.0')
+# The version lives in src/VERSION, beside the code that reads it (src/const.py);
+# it is installed with the package so both the source tree and an install agree.
+project('timezones', version: files('src/VERSION'))
+
+# The desktop entry, GSettings schema, icon and resource bundle are all named
+# after the application id; src/const.py holds the same value for the Python side.
+app_id = 'com.hernantz.timezones'
 
 python_mod = import('python')
 python = python_mod.find_installation('python3')
@@ -16,6 +22,8 @@ install_data(
 install_data(
   'src/__init__.py',
   'src/app.py',
+  'src/const.py',
+  'src/VERSION',
   'src/main_window.py',
   'src/model.py',
   'src/persistence.py',
@@ -31,7 +39,7 @@ install_data(
 
 # Compile and install GResource bundle
 gnome.compile_resources(
-  'com.hernantz.timezones',
+  app_id,
   'data/resources/gresource.xml',
   gresource_bundle: true,
   install: true,
@@ -41,7 +49,7 @@ gnome.compile_resources(
 
 # Install and compile GSettings schema
 install_data(
-  'data/com.hernantz.timezones.gschema.xml',
+  'data' / app_id + '.gschema.xml',
   install_dir: join_paths(get_option('datadir'), 'glib-2.0', 'schemas')
 )
 
@@ -68,16 +76,16 @@ install_data(
 # metainfo are named after the application id so the shell can match a running
 # window (its Wayland app_id) to this entry, and so pick up Icon= below.
 install_data(
-  'data/icons/hicolor/scalable/apps/com.hernantz.timezones.svg',
+  'data/icons/hicolor/scalable/apps' / app_id + '.svg',
   install_dir: join_paths(get_option('datadir'), 'icons', 'hicolor', 'scalable', 'apps')
 )
 
 install_data(
-  'data/com.hernantz.timezones.desktop',
+  'data' / app_id + '.desktop',
   install_dir: join_paths(get_option('datadir'), 'applications')
 )
 
 install_data(
-  'data/appdata/com.hernantz.timezones.metainfo.xml',
+  'data/appdata' / app_id + '.metainfo.xml',
   install_dir: join_paths(get_option('datadir'), 'metainfo')
 )

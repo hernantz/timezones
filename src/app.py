@@ -5,8 +5,7 @@ import sys
 
 from gi.repository import Gio
 
-RESOURCE_PREFIX = "/com/hernantz/timezones"
-_BUNDLE = "com.hernantz.timezones.gresource"
+from .const import APP_ID, GRESOURCE_BUNDLE, RESOURCE_PREFIX
 
 
 def _register_resources() -> None:
@@ -16,11 +15,16 @@ def _register_resources() -> None:
     """
     parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     build = os.environ.get("TIMEZONES_BUILD_DIR", "builddir")
-    for path in (os.path.join(parent, _BUNDLE), os.path.join(parent, build, _BUNDLE)):
+    for path in (
+        os.path.join(parent, GRESOURCE_BUNDLE),
+        os.path.join(parent, build, GRESOURCE_BUNDLE),
+    ):
         if os.path.exists(path):
             Gio.Resource._register(Gio.resource_load(path))
             return
-    raise FileNotFoundError(f"{_BUNDLE} not found next to {parent} — run `make build`")
+    raise FileNotFoundError(
+        f"{GRESOURCE_BUNDLE} not found next to {parent} — run `make build`"
+    )
 
 
 _register_resources()
@@ -55,7 +59,7 @@ def _load_style() -> None:
 
 class App(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="com.hernantz.timezones", flags=0)
+        super().__init__(application_id=APP_ID, flags=0)
         # A source-tree run would otherwise be swallowed by an already running
         # installed copy: same application id means GApplication just raises
         # that window and exits, so you end up testing the old code.
@@ -72,9 +76,9 @@ class App(Adw.Application):
         for name, accels in _ACCELS.items():
             self.set_accels_for_action(name, accels)
 
-        # Wayland matches the window to com.hernantz.timezones.desktop by app id
+        # Wayland matches the window to the app id's .desktop entry
         # and takes the icon from there; X11 needs it named explicitly.
-        Gtk.Window.set_default_icon_name("com.hernantz.timezones")
+        Gtk.Window.set_default_icon_name(APP_ID)
 
     def do_activate(self):
         win = self.props.active_window
@@ -86,7 +90,7 @@ class App(Adw.Application):
 def main():
     # argv[0] would otherwise make the window show up as "python3": the shell
     # takes the Wayland app_id / X11 WM_CLASS from the program name.
-    GLib.set_prgname("com.hernantz.timezones")
+    GLib.set_prgname(APP_ID)
     GLib.set_application_name("Timezones")
     app = App()
     return app.run(sys.argv)

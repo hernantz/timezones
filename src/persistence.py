@@ -8,9 +8,8 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio  # noqa: E402
 
+from .const import APP_ID
 from .model import City
-
-APP_ID = "com.hernantz.timezones"
 
 XDG_CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
 DATA_DIR = XDG_CONFIG_HOME / "timezones"

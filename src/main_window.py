@@ -7,6 +7,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango
 
 from . import tzinfo_helpers as tzinfo
 from .add_dialog import AddTimezoneDialog
+from .const import APP_ID, VERSION
 from .date_popover import DatePopover
 from .model import City, ClockModel
 from .persistence import Settings, load_cities, save_cities
@@ -895,8 +896,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _on_about(self, *_args) -> None:
         about = Adw.AboutDialog(
             application_name="Timezones",
-            application_icon="com.hernantz.timezones",
-            version="0.1.0",
+            application_icon=APP_ID,
+            version=VERSION,
             developer_name="Hernan Tz",
             license_type=Gtk.License.GPL_3_0,
             comments="Keep track of the time in cities that matter to you.",
