@@ -459,27 +459,54 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             day=self._viewing_date.day,
         )
 
+    def _make_row(self, city: City) -> TimezoneRow:
+        row = TimezoneRow(city)
+        row.connect("set-reference", self._on_row_set_reference)
+        row.connect("edit-label", self._on_row_edit_label)
+        row.connect("move-up", self._on_row_move_up)
+        row.connect("move-down", self._on_row_move_down)
+        row.connect("remove-row", self._on_row_remove)
+        row.connect("reorder", self._on_row_reorder)
+        return row
+
     def _rebuild_rows(self) -> None:
+        """Bring the list in line with the model, reusing the rows already up.
+
+        Every one of the fifteen callers used to mean "throw away every row and
+        every one of its 24 hour cells and build them again" — including a
+        reorder, which changes no cell at all, and the up/down buttons in the
+        reorder dialog, where the cost lands on every click. Rows are keyed by
+        timezone and moved rather than rebuilt; `TimezoneRow.update()` and
+        `TimelineStrip.update()` are both written to be re-run on a live row.
+        """
+        existing: dict[str, TimezoneRow] = {}
         child = self._list_box.get_first_child()
         while child is not None:
-            nxt = child.get_next_sibling()
-            self._list_box.remove(child)
-            child = nxt
+            existing[child.city.tz] = child
+            child = child.get_next_sibling()
 
         at = self._effective_at()
         n = len(self._model.cities)
+        previous: TimezoneRow | None = None
         for i, city in enumerate(self._model.cities):
-            row = TimezoneRow(city)
-            row.connect("set-reference", self._on_row_set_reference)
-            row.connect("edit-label", self._on_row_edit_label)
-            row.connect("move-up", self._on_row_move_up)
-            row.connect("move-down", self._on_row_move_down)
-            row.connect("remove-row", self._on_row_remove)
-            row.connect("reorder", self._on_row_reorder)
+            row = existing.pop(city.tz, None)
+            if row is None:
+                row = self._make_row(city)
+                self._list_box.append(row)
+            else:
+                # The model may hand back a fresh City for the same zone (a
+                # reload, say); the row's own reference has to follow it or it
+                # keeps reporting the old label and reference flag.
+                row.city = city
+            if row.get_prev_sibling() is not previous:
+                self._list_box.reorder_child_after(row, previous)
             row.set_move_enabled(i > 0, i < n - 1)
             row.update(self._model, self._fmt_24h, self._show_offsets, self._show_daynight, at)
             row.set_narrow(self._narrow)
-            self._list_box.append(row)
+            previous = row
+
+        for stale in existing.values():
+            self._list_box.remove(stale)
 
         self._update_empty_state()
         self._grid_date = self._current_grid_date()
