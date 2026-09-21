@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.hernantz.timezones</id>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Timezones</name>
+  <summary>World time clocks with native GTK4 UI</summary>
+
+  <description>
+    <p>
+      Keep track of the time in the cities that matter to you. Timezones shows a
+      row per city on a shared timeline, so a glance tells you who is asleep, who
+      is at work, and what an hour of your day looks like everywhere at once.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Scrub the timeline to read the same moment in every city</li>
+      <li>Daylight shading, so working hours and the middle of the night are obvious</li>
+      <li>Pick any date to plan ahead across daylight saving changes</li>
+      <li>Share a time as a calendar invitation or as text</li>
+      <li>12- or 24-hour clocks, light and dark themes</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.hernantz.timezones.desktop</launchable>
+
+  <url type="homepage">https://github.com/hernantz/timezones</url>
+  <url type="bugtracker">https://github.com/hernantz/timezones/issues</url>
+  <url type="vcs-browser">https://github.com/hernantz/timezones</url>
+
+  <developer id="io.github.hernantz">
+    <name>Hernan Tz</name>
+  </developer>
+
+  <!-- Nothing in the app falls under any OARS category. -->
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.1.0" date="2026-09-20">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

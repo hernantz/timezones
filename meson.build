@@ -4,7 +4,7 @@ project('timezones', version: files('src/VERSION'))
 
 # The desktop entry, GSettings schema, icon and resource bundle are all named
 # after the application id; src/const.py holds the same value for the Python side.
-app_id = 'com.hernantz.timezones'
+app_id = 'io.github.hernantz.timezones'
 
 python_mod = import('python')
 python = python_mod.find_installation('python3')

@@ -5,7 +5,7 @@ Version:        0.1.0
 Release:        1%{?dist}
 Summary:        World time clocks with native GTK4 UI
 License:        GPL-3.0-or-later
-URL:            https://example.invalid
+URL:            https://github.com/hernantz/timezones
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
@@ -48,19 +48,19 @@ World time clocks with native GTK4 UI.
 %meson_install
 
 %check
-desktop-file-validate %{buildroot}%{_datadir}/applications/com.hernantz.timezones.desktop
+desktop-file-validate %{buildroot}%{_datadir}/applications/io.github.hernantz.timezones.desktop
 
 %files
 %license LICENSE*
 %doc README* 
 
 %{_bindir}/timezones
-%{_datadir}/applications/com.hernantz.timezones.desktop
+%{_datadir}/applications/io.github.hernantz.timezones.desktop
 %{_datadir}/metainfo/*
 
 %{python3_sitearch}/timezones/*
-%{_datadir}/glib-2.0/schemas/com.hernantz.timezones.gschema.xml
+%{_datadir}/glib-2.0/schemas/io.github.hernantz.timezones.gschema.xml
 
-%{_datadir}/icons/hicolor/scalable/apps/com.hernantz.timezones.svg
+%{_datadir}/icons/hicolor/scalable/apps/io.github.hernantz.timezones.svg
 
 %changelog

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/com/hernantz/timezones">
+  <gresource prefix="/io/github/hernantz/timezones">
     <file>style.css</file>
     <!-- globe-symbolic has no Adwaita equivalent; every other icon now comes
          from the system icon theme by name. -->

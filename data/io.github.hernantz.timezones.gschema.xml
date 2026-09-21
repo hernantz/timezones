@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema id="com.hernantz.timezones" path="/com/hernantz/timezones/">
+  <schema id="io.github.hernantz.timezones" path="/io/github/hernantz/timezones/">
     <key name="fmt-24h" type="b">
       <default>true</default>
       <summary>Use 24-hour time format</summary>
@@ -14,7 +14,8 @@
 
     <key name="show-offsets" type="b">
       <default>true</default>
-      <summary>Show UTC offset pills on non-reference rows</summary>
+      <summary>Show offset pills on non-reference rows</summary>
+      <description>The offset is measured from the reference row, not from UTC.</description>
     </key>
 
     <key name="show-daynight" type="b">
