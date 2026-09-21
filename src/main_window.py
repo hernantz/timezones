@@ -993,7 +993,9 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _on_show_offsets_changed(self, _dialog: PreferencesDialog, value: bool) -> None:
         self._show_offsets = value
         self._settings.set_bool("show-offsets", value)
-        self._refresh_rows()
+        # Full rebuild, not _refresh_rows: the pill is set by row.update(),
+        # which the time-label-only refresh never reaches.
+        self._rebuild_rows()
 
     def _on_show_daynight_changed(self, _dialog: PreferencesDialog, value: bool) -> None:
         self._show_daynight = value

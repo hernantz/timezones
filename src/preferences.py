@@ -157,7 +157,12 @@ class PreferencesDialog(Adw.PreferencesDialog):
     def _build_view_options_group(self, show_offsets: bool, show_daynight: bool) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(title="View options")
 
-        offsets_row = Adw.SwitchRow(title="Show UTC offsets")
+        # Not a UTC offset: ClockModel.offset_hours() is measured against the
+        # reference row, so the pill reads +2h for Cairo when London is home.
+        offsets_row = Adw.SwitchRow(
+            title="Show offsets",
+            subtitle="Hours each city is ahead of or behind the reference",
+        )
         offsets_row.set_active(show_offsets)
         offsets_row.connect("notify::active", lambda r, _p: self.emit("show-offsets-changed", r.get_active()))
         group.add(offsets_row)
