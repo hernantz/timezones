@@ -391,6 +391,19 @@ headerbar.tz-headerbar .title {
   color: #ffffff;
 }
 
+/* Already in the list: a state marker, not a control. Dropping the filled
+   circle keeps the blue "+" as the only thing in the row that looks clickable —
+   as a disabled button it read as broken instead of done. */
+.tz-add-btn.added,
+.tz-add-btn.added:disabled {
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  border: none;
+  color: #9a9aa1;
+  opacity: 1;
+}
+
 .tz-swatch {
   min-height: 50px;
   border-radius: 8px;
