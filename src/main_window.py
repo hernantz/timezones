@@ -984,7 +984,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             application_name="Timezones",
             application_icon=APP_ID,
             version=VERSION,
-            developer_name="Hernan Tz",
+            developer_name="Hernan Lozano",
             license_type=Gtk.License.GPL_3_0,
             comments="Keep track of the time in cities that matter to you.",
         )
