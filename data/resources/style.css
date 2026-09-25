@@ -369,7 +369,7 @@ headerbar.tz-headerbar .title {
   color: #6f6f7a;
 }
 
-/* ---- Add-timezone dialog / preferences swatches --------------------------- */
+/* ---- Add-timezone dialog / preferences theme picker --------------------------- */
 
 .tz-search-entry {
   border-radius: 10px;
@@ -404,49 +404,46 @@ headerbar.tz-headerbar .title {
   opacity: 1;
 }
 
-.tz-swatch {
-  min-height: 50px;
-  border-radius: 8px;
-  border: 1px solid #e1e1e6;
-  overflow: hidden;
+/* Round theme picker, after GNOME Text Editor / Console. */
+.tz-theme-selector {
+  margin: 12px;
 }
 
-.tz-swatch.selected {
-  border: 2px solid #3584e4;
+.tz-theme-selector checkbutton {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 1px;
+  background-clip: content-box;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px alpha(#000000, 0.15);
 }
 
-.tz-swatch-header {
+.tz-theme-selector checkbutton:checked {
+  box-shadow: inset 0 0 0 2px @accent_bg_color;
+}
+
+.tz-theme-selector checkbutton.system {
+  background-image: linear-gradient(to bottom right, #ffffff 49.99%, #242430 50.01%);
+}
+.tz-theme-selector checkbutton.light { background-color: #ffffff; }
+.tz-theme-selector checkbutton.dark { background-color: #242430; }
+
+/* The radio indicator becomes a small check badge on the rim. */
+.tz-theme-selector checkbutton radio {
+  -gtk-icon-source: none;
+  border: none;
+  background: none;
+  box-shadow: none;
+  min-width: 12px;
   min-height: 12px;
+  padding: 2px;
+  transform: translate(27px, 14px);
 }
 
-.tz-swatch-body {
-  min-height: 38px;
-}
-
-.tz-swatch-light .tz-swatch-header { background-color: #ffffff; }
-.tz-swatch-light .tz-swatch-body { background-color: #fafafb; }
-.tz-swatch-dark .tz-swatch-header { background-color: #2b2b38; }
-.tz-swatch-dark .tz-swatch-body { background-color: #242430; }
-
-.tz-swatch-line {
-  min-height: 3px;
-  border-radius: 2px;
-  margin: 2px 6px;
-}
-.tz-swatch-light .tz-swatch-line { background-color: alpha(#1c1c1e, 0.18); }
-.tz-swatch-dark .tz-swatch-line { background-color: alpha(#ffffff, 0.22); }
-
-.tz-swatch-label {
-  font-size: 12px;
-}
-
-.tz-swatch-label.selected {
-  color: #1c1c1e;
-  font-weight: 700;
-}
-
-.tz-swatch-label.unselected {
-  color: #6f6f76;
+.tz-theme-selector checkbutton radio:checked {
+  -gtk-icon-source: -gtk-icontheme("object-select-symbolic");
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
 }
 
 /* ---- Jump to date popover -------------------------------------------------- */
@@ -628,16 +625,8 @@ window.tz-window.dark .tz-chip {
   background-color: #28405f;
 }
 
-window.tz-window.dark .tz-swatch {
-  border-color: #3d3d4d;
-}
-
-window.tz-window.dark .tz-swatch-label.unselected {
-  color: #a7a7b8;
-}
-
-window.tz-window.dark .tz-swatch-label.selected {
-  color: #f2f2f5;
+window.tz-window.dark .tz-theme-selector checkbutton:not(:checked) {
+  box-shadow: inset 0 0 0 1px alpha(#ffffff, 0.2);
 }
 
 window.tz-window.dark .tz-results-label {

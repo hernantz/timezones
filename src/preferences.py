@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from gi.repository import Adw, GObject, Gtk
 
-_APPEARANCE_OPTIONS = [("light", "Light"), ("dark", "Dark"), ("system", "System")]
+_APPEARANCE_OPTIONS = [("system", "Follow system"), ("light", "Light"), ("dark", "Dark")]
 
 
 class PreferencesDialog(Adw.PreferencesDialog):
@@ -40,80 +40,28 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         row = Adw.PreferencesRow()
         row.set_activatable(False)
-        container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10, homogeneous=True)
-        container.set_margin_top(10)
-        container.set_margin_bottom(10)
-        container.set_margin_start(12)
-        container.set_margin_end(12)
+        selector = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18, halign=Gtk.Align.CENTER)
+        selector.add_css_class("tz-theme-selector")
 
-        self._swatch_widgets: dict[str, tuple[Gtk.Widget, Gtk.Label]] = {}
+        self._theme_buttons: dict[str, Gtk.CheckButton] = {}
+        group_leader: Gtk.CheckButton | None = None
         for mode, title in _APPEARANCE_OPTIONS:
-            option = self._build_swatch(mode, title)
-            container.append(option)
-        row.set_child(container)
-        group.add(row)
+            button = Gtk.CheckButton(tooltip_text=title, group=group_leader)
+            button.add_css_class(mode)
+            button.update_property([Gtk.AccessibleProperty.LABEL], [title])
+            button.set_active(mode == theme_mode)
+            button.connect("toggled", self._on_theme_toggled, mode)
+            selector.append(button)
+            self._theme_buttons[mode] = button
+            group_leader = group_leader or button
 
-        self._set_selected_theme(theme_mode)
+        row.set_child(selector)
+        group.add(row)
         return group
 
-    def _build_swatch(self, mode: str, title: str) -> Gtk.Widget:
-        option_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-
-        swatch = Gtk.Box()
-        swatch.add_css_class("tz-swatch")
-
-        if mode == "system":
-            half = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0, homogeneous=True)
-            half.append(self._swatch_face("light"))
-            half.append(self._swatch_face("dark"))
-            swatch.append(half)
-        else:
-            swatch.append(self._swatch_face(mode))
-
-        label = Gtk.Label(label=title)
-        label.add_css_class("tz-swatch-label")
-
-        option_box.append(swatch)
-        option_box.append(label)
-
-        click = Gtk.GestureClick()
-        click.connect("released", lambda *_a, m=mode: self._on_theme_selected(m))
-        option_box.add_controller(click)
-        option_box.set_cursor_from_name("pointer")
-
-        self._swatch_widgets[mode] = (swatch, label)
-        return option_box
-
-    @staticmethod
-    def _swatch_face(variant: str) -> Gtk.Widget:
-        face = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        face.add_css_class(f"tz-swatch-{variant}")
-        face.set_hexpand(True)
-
-        header = Gtk.Box()
-        header.add_css_class("tz-swatch-header")
-
-        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-        body.add_css_class("tz-swatch-body")
-        body.set_valign(Gtk.Align.CENTER)
-        for _ in range(2):
-            line = Gtk.Box()
-            line.add_css_class("tz-swatch-line")
-            body.append(line)
-
-        face.append(header)
-        face.append(body)
-        return face
-
-    def _on_theme_selected(self, mode: str) -> None:
-        self._set_selected_theme(mode)
-        self.emit("theme-changed", mode)
-
-    def _set_selected_theme(self, mode: str) -> None:
-        for m, (swatch, label) in self._swatch_widgets.items():
-            selected = m == mode
-            swatch.set_css_classes(["tz-swatch"] + (["selected"] if selected else []))
-            label.set_css_classes(["tz-swatch-label", "selected" if selected else "unselected"])
+    def _on_theme_toggled(self, button: Gtk.CheckButton, mode: str) -> None:
+        if button.get_active():
+            self.emit("theme-changed", mode)
 
     # -- Time format --------------------------------------------------------
 
