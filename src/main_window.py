@@ -99,6 +99,11 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._pinned = False
         self._pinned_column: float | None = None
         self._grid_date: date | None = None
+        # Rows removed while the current undo toast is up, as (index, city)
+        # in removal order.
+        self._removed: list[tuple[int, City]] = []
+        self._removed_reference: City | None = None
+        self._removed_toast: Adw.Toast | None = None
 
         defaults = [City(tz=d.tz, label=d.label, is_reference=d.is_reference) for d in _DEFAULT_CITIES]
         cities = load_cities(defaults)
@@ -869,10 +874,64 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._rebuild_rows()
 
     def _on_row_remove(self, row: TimezoneRow) -> None:
-        was_reference = row.city.is_reference
-        self._model.cities.remove(row.city)
-        if was_reference and self._model.cities:
-            self._model.cities[0].is_reference = True
+        cities = self._model.cities
+        city = row.city
+        if self._removed_toast is None:
+            # The reference as it stood before this run of removals, so undo
+            # can hand the role back even after it was reassigned to cities[0].
+            self._removed_reference = self._model.reference
+        self._removed.append((cities.index(city), city))
+        cities.remove(city)
+        if city.is_reference and cities:
+            city.is_reference = False
+            cities[0].is_reference = True
+        # Saved now, not when the toast goes away: quitting with the toast
+        # still up must not bring the row back on the next launch.
+        self._persist()
+        self._rebuild_rows()
+        self._show_removed_toast()
+
+    def _show_removed_toast(self) -> None:
+        # One toast for a run of removals, retitled in place, rather than a
+        # queue of toasts each waiting out its own timeout.
+        if len(self._removed) == 1:
+            title = f"Removed {tzinfo.city_name(self._removed[0][1].tz)}"
+        else:
+            title = f"Removed {len(self._removed)} timezones"
+        toast = self._removed_toast
+        if toast is None:
+            toast = Adw.Toast.new(title)
+            toast.set_button_label("_Undo")
+            toast.set_use_markup(False)
+            toast.connect("button-clicked", self._on_undo_remove)
+            toast.connect("dismissed", self._on_removed_toast_dismissed)
+            self._removed_toast = toast
+        else:
+            toast.set_title(title)
+        # Re-adding a toast that is already showing restarts its timeout.
+        self._toasts.add_toast(toast)
+
+    def _on_removed_toast_dismissed(self, toast: Adw.Toast) -> None:
+        if toast is self._removed_toast:
+            self._removed_toast = None
+            self._removed = []
+            self._removed_reference = None
+
+    def _on_undo_remove(self, _toast: Adw.Toast) -> None:
+        cities = self._model.cities
+        present = {c.tz for c in cities}
+        # Reverse order, so each index means what it did when it was taken.
+        # Clamped, since rows may have been moved in the meantime; skipped if
+        # the zone was added back by hand before undoing.
+        for index, city in reversed(self._removed):
+            if city.tz in present:
+                continue
+            cities.insert(min(index, len(cities)), city)
+            present.add(city.tz)
+        if self._removed_reference is not None and self._removed_reference in cities:
+            self._model.set_reference(self._removed_reference)
+        self._removed = []
+        self._removed_reference = None
         self._persist()
         self._rebuild_rows()
 
