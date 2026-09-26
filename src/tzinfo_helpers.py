@@ -399,6 +399,39 @@ def format_offset(offset_hours: float) -> str:
     return C_("offset in hours", "{sign}{hours}h").format(sign=sign, hours=hours)
 
 
+def format_utc_offset(offset: timedelta) -> str:
+    """The offset in the form it is written on a zone, as in "UTC−3" or "UTC+5:30".
+
+    Unlike format_offset(), this names a zone rather than a gap between two
+    clocks, so it follows the convention people already read zones by: whole
+    hours bare, and minutes as a clock reading rather than a decimal.
+    """
+    minutes = int(offset.total_seconds()) // 60
+    sign = "−" if minutes < 0 else "+"
+    hours, minutes = divmod(abs(minutes), 60)
+    value = f"{sign}{hours}" if not minutes else f"{sign}{hours}:{minutes:02d}"
+    # Translators: a zone's offset from UTC, as in "UTC−3" or "UTC+5:30".
+    # {offset} is the signed offset; translate "UTC" if your language uses
+    # another abbreviation for it.
+    return C_("UTC offset", "UTC{offset}").format(offset=value)
+
+
+def names_zone(abbr: str) -> bool:
+    """Whether an abbreviation says anything the UTC offset beside it does not.
+
+    tzdata has no letters for most of the world's zones and spells them as the
+    offset instead — Buenos Aires is "-03", Dubai "+04" — and UTC's own is
+    "UTC". Shown next to the offset, either would say the same thing twice.
+    """
+    return bool(abbr) and abbr[0] not in "+-" and abbr != "UTC"
+
+
+def describe_zone(abbr: str, offset: timedelta) -> str:
+    """The abbreviation and UTC offset as a subtitle shows them, e.g. "EDT · UTC−4"."""
+    utc = format_utc_offset(offset)
+    return f"{abbr} · {utc}" if names_zone(abbr) else utc
+
+
 # ---- Daylight-saving transitions -------------------------------------------
 
 

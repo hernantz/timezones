@@ -337,18 +337,23 @@ class TimezoneRow(Gtk.Box):
     def _zone_summary(
         tz_id: str, transitions: list[tuple[int, tzinfo.DstTransition]], at: datetime | None
     ) -> str:
-        """The zone's abbreviation, or both of them on a day that has two.
+        """The zone's abbreviation and UTC offset, or both pairs on a day that has two.
 
         A bare "EST" on a day the row spends half of on EDT would be a small
         lie, and the one place a reader looks to check which rules are in force.
         """
         if not transitions:
-            return tzinfo.abbreviation(tz_id, at)
+            return tzinfo.describe_zone(
+                tzinfo.abbreviation(tz_id, at), tzinfo.utc_offset(tz_id, at)
+            )
         _, first = transitions[0]
         _, last = transitions[-1]
         before, _ = tzinfo.abbreviation_change(tz_id, first)
         _, after = tzinfo.abbreviation_change(tz_id, last)
-        return f"{before} → {after}"
+        utc = f"{tzinfo.format_utc_offset(first.before)} → {tzinfo.format_utc_offset(last.after)}"
+        if tzinfo.names_zone(before) and tzinfo.names_zone(after):
+            return f"{before} → {after} · {utc}"
+        return utc
 
     def _update_warning(
         self, city: City, transitions: list[tuple[int, tzinfo.DstTransition]], fmt_24h: bool

@@ -123,10 +123,9 @@ class _ResultRow:
         # doing this very astimezone, so asking it separately would repeat the
         # work. Same instant either way, so the two cannot disagree.
         local = tzinfo.local_now(entry.tz_id, at)
-        offset = local.utcoffset().total_seconds() / 3600.0
         self._name.set_label(entry.city)
         self._subtitle.set_label(
-            f"{entry.country} · {entry.abbr} · UTC{tzinfo.format_offset(offset)}"
+            f"{entry.country} · {tzinfo.describe_zone(local.tzname() or '', local.utcoffset())}"
         )
         self._preview.set_label(local.strftime("%H:%M"))
         self._set_added(added)
