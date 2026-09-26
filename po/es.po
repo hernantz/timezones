@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: timezones\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-25 23:21-0300\n"
+"POT-Creation-Date: 2026-09-26 17:42-0300\n"
 "PO-Revision-Date: 2026-09-25 23:12-0300\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: Spanish\n"
@@ -112,48 +112,6 @@ msgstr "Sin resultados"
 msgid "Try a different city, country, or timezone name."
 msgstr "Prueba con otra ciudad, país o nombre de huso horario."
 
-#. Translators: calendar column heading, the initial of Monday.
-#: src/date_popover.py:132
-msgctxt "Monday initial"
-msgid "M"
-msgstr "L"
-
-#. Translators: calendar column heading, the initial of Tuesday.
-#: src/date_popover.py:134
-msgctxt "Tuesday initial"
-msgid "T"
-msgstr "M"
-
-#. Translators: calendar column heading, the initial of Wednesday.
-#: src/date_popover.py:136
-msgctxt "Wednesday initial"
-msgid "W"
-msgstr "X"
-
-#. Translators: calendar column heading, the initial of Thursday.
-#: src/date_popover.py:138
-msgctxt "Thursday initial"
-msgid "T"
-msgstr "J"
-
-#. Translators: calendar column heading, the initial of Friday.
-#: src/date_popover.py:140
-msgctxt "Friday initial"
-msgid "F"
-msgstr "V"
-
-#. Translators: calendar column heading, the initial of Saturday.
-#: src/date_popover.py:142
-msgctxt "Saturday initial"
-msgid "S"
-msgstr "S"
-
-#. Translators: calendar column heading, the initial of Sunday.
-#: src/date_popover.py:144
-msgctxt "Sunday initial"
-msgid "S"
-msgstr "D"
-
 #: src/i18n.py:80
 msgctxt "before noon"
 msgid "AM"
@@ -199,14 +157,6 @@ msgstr "%-d %b"
 msgctxt "strftime format"
 msgid "%a %-d"
 msgstr "%a %-d"
-
-#. Translators: strftime format for the calendar's heading, as in
-#. "September 2026". %OB is the month's name standing on its own, which
-#. differs from %B in languages that inflect it (Russian, Polish, Greek).
-#: src/i18n.py:132
-msgctxt "strftime format"
-msgid "%OB %Y"
-msgstr "%OB %Y"
 
 #: src/main_window.py:26
 msgid "You"

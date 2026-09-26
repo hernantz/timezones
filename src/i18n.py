@@ -15,7 +15,6 @@ the strings have already been imported.
 
 from __future__ import annotations
 
-import ctypes
 import gettext
 import locale
 from datetime import datetime
@@ -125,46 +124,3 @@ def format_date_flag(at: datetime) -> str:
     # starts on the timeline, as in "FRI 25". It is shown in capitals.
     return at.strftime(C_("strftime format", "%a %-d")).upper()
 
-
-def format_month_year(at: datetime) -> str:
-    # Translators: strftime format for the calendar's heading, as in
-    # "September 2026". %OB is the month's name standing on its own, which
-    # differs from %B in languages that inflect it (Russian, Polish, Greek).
-    return at.strftime(C_("strftime format", "%OB %Y"))
-
-
-# ---- The calendar ------------------------------------------------------------
-
-# glibc's nl_langinfo() items for the week, from <langinfo.h>. Python's locale
-# module does not expose them, but their values are part of the C library's
-# ABI, compiled into every program that asks, so they cannot move.
-_NL_TIME_WEEK_1STDAY = 0x20066
-_NL_TIME_FIRST_WEEKDAY = 0x20068
-
-# The dates _NL_TIME_WEEK_1STDAY answers with, naming the day its count starts
-# from: 30 Nov 1997 was a Sunday, 1 Dec 1997 a Monday.
-_WEEK_ORIGINS = {19971130: 6, 19971201: 0}
-
-
-def first_weekday() -> int:
-    """The day the user's locale starts the week on, 0 for Monday to 6 for
-    Sunday — the numbering Python's calendar module takes.
-
-    Read the way GtkCalendar reads it: glibc stores a week origin, and the
-    first weekday as a 1-based count from that origin. en_US counts 1 from
-    Sunday (so Sunday), de_DE 2 from Sunday (Monday), ar_EG 7 (Saturday).
-    Monday, what the popover always used, if the C library cannot say.
-    """
-    try:
-        libc = ctypes.CDLL(None)
-        libc.nl_langinfo.argtypes = [ctypes.c_int]
-        libc.nl_langinfo.restype = ctypes.c_void_p
-        # A 32-bit number stored in the pointer itself, not a string it points
-        # to; the upper half of a 64-bit pointer is whatever was lying there.
-        origin = _WEEK_ORIGINS[(libc.nl_langinfo(_NL_TIME_WEEK_1STDAY) or 0) & 0xFFFFFFFF]
-        first = ctypes.string_at(libc.nl_langinfo(_NL_TIME_FIRST_WEEKDAY), 1)[0]
-    except (AttributeError, KeyError, OSError, TypeError, ValueError):
-        return 0
-    if not 1 <= first <= 7:
-        return 0
-    return (origin + first - 1) % 7

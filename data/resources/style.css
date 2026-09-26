@@ -454,33 +454,22 @@ headerbar.tz-headerbar .title {
 
 /* ---- Jump to date popover -------------------------------------------------- */
 
-.tz-cal-weekday {
-  font-size: 10px;
+/* The popover is the frame: the calendar's own border and the rule under its
+   header would draw a second one inside it. */
+calendar.tz-calendar {
+  border: none;
+  background: none;
+}
+
+calendar.tz-calendar > header {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+/* Descendant, not child: the month name sits inside a stack, so that it can
+   slide when the month changes. */
+calendar.tz-calendar > header label {
   font-weight: 700;
-  color: #9a9aa1;
-}
-
-.tz-cal-day {
-  font-size: 12.5px;
-  min-width: 28px;
-  min-height: 28px;
-  border-radius: 999px;
-  padding: 0;
-}
-
-.tz-cal-day.muted {
-  color: #9a9aa1;
-}
-
-.tz-cal-day.today {
-  box-shadow: 0 0 0 1.5px @accent_bg_color inset;
-  color: @accent_color;
-  font-weight: 700;
-}
-
-.tz-cal-day.selected {
-  background-color: @accent_bg_color;
-  color: @accent_fg_color;
 }
 
 .tz-today-btn {
