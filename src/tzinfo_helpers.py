@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from math import asin, atan2, cos, degrees, radians, sin
 from pathlib import Path
 from zoneinfo import TZPATH, ZoneInfo
+
+from .i18n import C_, _, catalog, format_clock, format_month_day, ngettext
 
 # Signed degrees and minutes, optionally seconds, as zone.tab writes a position:
 # +DDMM+DDDMM or +DDMMSS+DDDMMSS, latitude then longitude, no separator.
@@ -48,9 +52,25 @@ def _read_table(*names: str) -> list[list[str]]:
 
 
 @lru_cache(maxsize=None)
+def _country_names() -> dict[str, str]:
+    """ISO 3166 code to country name, in English, as tzdata spells it."""
+    return {row[0]: row[1] for row in _read_table("iso3166.tab") if len(row) >= 2}
+
+
+@lru_cache(maxsize=None)
+def _tz_to_code() -> dict[str, str]:
+    """Each zone to the ISO 3166 code of the country keeping it."""
+    return {
+        row[2]: row[0].split(",")[0]
+        for row in _read_table("zone.tab", "zone1970.tab")
+        if len(row) >= 3
+    }
+
+
+@lru_cache(maxsize=None)
 def _tz_to_country() -> dict[str, str]:
     """Every zone the app offers as a city, mapped to the country keeping it."""
-    countries = {row[0]: row[1] for row in _read_table("iso3166.tab") if len(row) >= 2}
+    countries = _country_names()
 
     # zone1970.tab is the maintained table, but it omits every zone that has
     # agreed with another since 1970 — Europe/Vatican, Africa/Accra and a couple
@@ -72,6 +92,8 @@ def _tz_to_country() -> dict[str, str]:
     # whose GMT±N members invert their sign (Etc/GMT+5 resolves to UTC−5) and
     # would misread badly in a column of offsets. The name spelled out keeps the
     # subtitle from reading "UTC · UTC · UTC+0h".
+    # Left in English, like every name in this table; country_name() is what
+    # translates it.
     table.setdefault("UTC", "Coordinated Universal Time")
     return table
 
@@ -129,12 +151,153 @@ def is_known_timezone(tz_id: str) -> bool:
     return tz_id in _tz_to_country()
 
 
-def city_name(tz_id: str) -> str:
+def english_city_name(tz_id: str) -> str:
     return tz_id.rsplit("/", 1)[-1].replace("_", " ")
 
 
-def country_name(tz_id: str) -> str:
+def english_country_name(tz_id: str) -> str:
     return _tz_to_country().get(tz_id, tz_id.split("/", 1)[0].replace("_", " "))
+
+
+@lru_cache(maxsize=None)
+def city_name(tz_id: str) -> str:
+    """The city a zone is named for, in the user's language where it is known.
+
+    See `_gweather_cities` for where the translations come from. Falls back to
+    the zone's own spelling, which is English.
+    """
+    english = english_city_name(tz_id)
+    contexts = _gweather_cities().get(_fold(english))
+    if not contexts:
+        return english
+    # The catalog keys a city by where it is ("City in Russia", "City in
+    # Texas, United States"), and plenty of names exist in more than one
+    # place. The one in this zone's country wins; failing that, the entry
+    # with no place attached; failing that, a name every place agrees on.
+    countries = _english_country_names(tz_id)
+    local = {
+        text
+        for where, text in contexts.items()
+        if where.rpartition(", ")[2] in countries
+    }
+    if len(local) != 1 and "" in contexts:
+        local = {contexts[""]}
+    if len(local) != 1:
+        local = set(contexts.values())
+    return local.pop() if len(local) == 1 else english
+
+
+@lru_cache(maxsize=None)
+def country_name(tz_id: str) -> str:
+    """The country keeping a zone, in the user's language where it is known.
+
+    iso-codes is the reference for country names, but for a country without a
+    short common name its only one is the formal, inverted "Russian
+    Federation" or "Korea, Republic of" — so its common name comes first, then
+    the short name GWeather's catalog translates, and only then iso-codes'
+    formal one. Without any translation the tzdata name stands, which keeps an
+    English UI exactly as it was.
+    """
+    if tz_id == "UTC":
+        return C_("time standard", "Coordinated Universal Time")
+    english = english_country_name(tz_id)
+    entry = _iso_countries().get(_tz_to_code().get(tz_id, ""), {})
+    iso, gweather = _iso_catalog(), _gweather_catalog()
+    for translations, context, msgid in (
+        (iso, None, entry.get("common_name")),
+        (gweather, "Country", english),
+        (gweather, None, english),
+        (gweather, "Country", entry.get("name")),
+        (gweather, None, entry.get("name")),
+        (iso, None, entry.get("name")),
+    ):
+        translated = _lookup(translations, context, msgid)
+        if translated:
+            return translated
+    return english
+
+
+def _lookup(translations, context: str | None, msgid: str | None) -> str | None:
+    """The catalog's own entry for `msgid`, or None if it has none.
+
+    Not gettext(), which answers an untranslated string with the string
+    itself and so cannot tell "Iran", translated as Iran, from "Iran" missing.
+    """
+    if not msgid:
+        return None
+    key = f"{context}\x04{msgid}" if context else msgid
+    return getattr(translations, "_catalog", {}).get(key) or None
+
+
+def _english_country_names(tz_id: str) -> set[str]:
+    """Every English name the zone's country goes by: tzdata writes
+    "Britain (UK)", iso-codes "United Kingdom", and GWeather could use either."""
+    names = {english_country_name(tz_id)}
+    entry = _iso_countries().get(_tz_to_code().get(tz_id, ""))
+    if entry is not None:
+        names.update(entry[key] for key in ("name", "common_name", "official_name") if key in entry)
+    return names
+
+
+@lru_cache(maxsize=None)
+def _iso_countries() -> dict[str, dict[str, str]]:
+    for root in ("/usr/share/iso-codes/json", "/app/share/iso-codes/json"):
+        path = Path(root, "iso_3166-1.json")
+        if path.is_file():
+            entries = json.loads(path.read_text(encoding="utf-8"))["3166-1"]
+            return {entry["alpha_2"]: entry for entry in entries}
+    return {}
+
+
+@lru_cache(maxsize=None)
+def _iso_catalog():
+    return catalog("iso_3166-1")
+
+
+@lru_cache(maxsize=None)
+def _gweather_catalog():
+    return catalog("gweather-locations")
+
+
+_CITY_CONTEXT = "City in "
+
+
+@lru_cache(maxsize=None)
+def _gweather_cities() -> dict[str, dict[str, str]]:
+    """Translated city names from the GWeather locations catalog.
+
+    The catalog is what GNOME Weather and Clocks translate their place names
+    with, and the only thing of theirs used here: loading the GWeather
+    database itself costs half a second, where reading its translations
+    costs a few milliseconds.
+
+    Indexed by accent-folded English name, then by the "where" of the entry's
+    context. The folding is what lets a zone spelled "Sao Paulo" find the
+    catalog's "São Paulo". Built by walking the parsed catalog, since lookups
+    by msgid alone could not match a name that is spelled differently; the
+    `_catalog` attribute is private, but GNUTranslations has kept it under
+    that name for as long as the module has existed.
+    """
+    entries = getattr(_gweather_catalog(), "_catalog", {})
+    cities: dict[str, dict[str, str]] = {}
+    for key, text in entries.items():
+        # Plural entries are keyed by tuples, and the "" entry is the header.
+        if not isinstance(key, str) or not key or not text:
+            continue
+        # Most cities have a context naming where they are; the ones only a
+        # single place in the world has often have none, and count as being
+        # anywhere ("").
+        context, _sep, msgid = key.rpartition("\x04")
+        if context and not context.startswith(_CITY_CONTEXT):
+            continue
+        cities.setdefault(_fold(msgid), {})[context[len(_CITY_CONTEXT):]] = text
+    return cities
+
+
+def _fold(name: str) -> str:
+    """Case- and accent-insensitive form of a name, for matching only."""
+    decomposed = unicodedata.normalize("NFKD", name)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
 
 
 def abbreviation(tz_id: str, at: datetime | None = None) -> str:
@@ -228,13 +391,12 @@ def is_daylight_hour(local_hour: int) -> bool:
 
 
 def format_offset(offset_hours: float) -> str:
-    if offset_hours == 0:
-        return "+0h"
-    sign = "+" if offset_hours > 0 else "−"
+    sign = "−" if offset_hours < 0 else "+"
     magnitude = abs(offset_hours)
-    if magnitude == int(magnitude):
-        return f"{sign}{int(magnitude)}h"
-    return f"{sign}{magnitude:g}h"
+    hours = f"{int(magnitude)}" if magnitude == int(magnitude) else f"{magnitude:g}"
+    # Translators: a difference between two clocks, in hours, as in "+2h" or
+    # "−5.5h". {sign} is + or −; add a space or change the unit to suit.
+    return C_("offset in hours", "{sign}{hours}h").format(sign=sign, hours=hours)
 
 
 # ---- Daylight-saving transitions -------------------------------------------
@@ -325,25 +487,34 @@ def describe_transition(city: str, transition: DstTransition, fmt_24h: bool) -> 
     scheduling — whether an hour is about to be repeated or skipped, has to be
     written out.
     """
-    switch = _format_wall(transition.switch_wall, fmt_24h)
-    date = transition.switch_wall.strftime("%b %-d")
-    if transition.shift < timedelta():
-        direction, tail = "back", f"{_format_wall(transition.resumed_wall, fmt_24h)} occurs twice"
-    else:
-        direction, tail = "forward", f"{switch} does not occur"
+    switch = format_clock(transition.switch_wall, fmt_24h)
+    date = format_month_day(transition.switch_wall)
     span = _format_span(abs(transition.shift))
-    return f"Clocks in {city} move {direction} {span} at {switch} on {date} — {tail}"
-
-
-def _format_wall(wall: datetime, fmt_24h: bool) -> str:
-    return wall.strftime("%H:%M" if fmt_24h else "%-I:%M %p")
+    if transition.shift < timedelta():
+        # Translators: a daylight-saving warning. {span} is like "1 hour",
+        # {time} is the clock reading the change happens at, {date} is like
+        # "Oct 25", and {repeated} is the reading that comes round twice.
+        return _(
+            "Clocks in {city} move back {span} at {time} on {date} — {repeated} occurs twice"
+        ).format(
+            city=city,
+            span=span,
+            time=switch,
+            date=date,
+            repeated=format_clock(transition.resumed_wall, fmt_24h),
+        )
+    # Translators: a daylight-saving warning. {span} is like "1 hour", {time}
+    # is the clock reading that gets skipped, and {date} is like "Mar 29".
+    return _(
+        "Clocks in {city} move forward {span} at {time} on {date} — {time} does not occur"
+    ).format(city=city, span=span, time=switch, date=date)
 
 
 def _format_span(span: timedelta) -> str:
     hours, minutes = divmod(int(span.total_seconds() // 60), 60)
     parts = []
     if hours:
-        parts.append(f"{hours} hour" + ("s" if hours != 1 else ""))
+        parts.append(ngettext("{n} hour", "{n} hours", hours).format(n=hours))
     if minutes:
-        parts.append(f"{minutes} minute" + ("s" if minutes != 1 else ""))
+        parts.append(ngettext("{n} minute", "{n} minutes", minutes).format(n=minutes))
     return " ".join(parts)

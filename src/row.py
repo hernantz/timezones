@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from gi.repository import Gdk, Gio, GObject, Graphene, Gtk, Pango
+from gi.repository import Gdk, Gio, GLib, GObject, Graphene, Gtk, Pango
 
 from . import tzinfo_helpers as tzinfo
+from .i18n import _, format_day, meridiem, twelve_hour
 from .model import City, ClockModel
 from .timeline import TimelineStrip
 
@@ -138,7 +139,7 @@ class TimezoneRow(Gtk.Box):
         self._home_icon = Gtk.Image.new_from_icon_name("user-home-symbolic")
         self._home_icon.add_css_class("tz-home-icon")
         self._home_icon.set_pixel_size(16)
-        self._home_icon.set_tooltip_text("Reference timezone")
+        self._home_icon.set_tooltip_text(_("Reference timezone"))
         self._home_icon.set_visible(False)
 
         self._offset_pill = Gtk.Label()
@@ -189,20 +190,21 @@ class TimezoneRow(Gtk.Box):
         self.insert_action_group("row", self._actions)
 
         menu = Gio.Menu()
-        menu.append("Set as reference timezone", "row.set-reference")
-        menu.append("Edit label…", "row.edit-label")
+        menu.append(_("Set as reference timezone"), "row.set-reference")
+        menu.append(_("Edit label…"), "row.edit-label")
         section = Gio.Menu()
-        section.append("Move up", "row.move-up")
-        section.append("Move down", "row.move-down")
+        section.append(_("Move up"), "row.move-up")
+        section.append(_("Move down"), "row.move-down")
         menu.append_section(None, section)
         remove_section = Gio.Menu()
-        remove_section.append("Remove timezone", "row.remove")
+        remove_section.append(_("Remove timezone"), "row.remove")
         menu.append_section(None, remove_section)
 
         self._more_btn = Gtk.MenuButton()
         self._more_btn.add_css_class("tz-more-btn")
         self._more_btn.add_css_class("flat")
         self._more_btn.set_icon_name("view-more-symbolic")
+        self._more_btn.set_tooltip_text(_("Timezone menu"))
         popover = Gtk.PopoverMenu.new_from_model(menu)
         popover.add_css_class("tz-row-menu")
         self._more_btn.set_popover(popover)
@@ -390,15 +392,21 @@ class TimezoneRow(Gtk.Box):
             self._time_label.set_markup(local.strftime("%H:%M"))
         else:
             # Meridiem rides along at a smaller size so 12h times stay inside
-            # the time block's width instead of pushing into the timeline.
+            # the time block's width instead of pushing into the timeline. The
+            # translation decides which side it sits on; its space becomes a
+            # small thin one, the gap this label has always used.
+            small = '<span size="62%">{}</span>'
+            layout = GLib.markup_escape_text(twelve_hour("\ue000", "\ue001"))
             self._time_label.set_markup(
-                local.strftime("%-I:%M") + f'<span size="62%"> {local.strftime("%p")}</span>'
+                layout.replace(" ", small.format("\u2009"))
+                .replace("\ue000", local.strftime("%-I:%M"))
+                .replace("\ue001", small.format(GLib.markup_escape_text(meridiem(local))))
             )
 
         ref = model.reference
         ref_today = tzinfo.local_now(ref.tz, at).date() if ref else at.date()
         differs = local.date() != ref_today
-        self._date_label.set_label(local.strftime("%a, %b %-d"))
+        self._date_label.set_label(format_day(local))
         self._date_label.remove_css_class("accent")
         if differs:
             self._date_label.add_css_class("accent")

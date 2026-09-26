@@ -9,12 +9,14 @@ comparison, not the one number the banner happens to show.
 
 from __future__ import annotations
 
+import unicodedata
 import uuid
 from datetime import datetime, timedelta, timezone
 
 from gi.repository import Gio, GLib, Gtk
 
 from . import tzinfo_helpers as tzinfo
+from .i18n import _, format_clock, format_day, format_day_year
 from .model import City, ClockModel
 
 # How long the calendar event runs. Nothing in the app knows a duration — the
@@ -33,12 +35,20 @@ def _row_name(city: City) -> str:
     """
     city_name = tzinfo.city_name(city.tz)
     if city.label and city.label.casefold() != city_name.casefold():
-        return f"{city_name} ({city.label})"
+        # Translators: a city and the user's own label for it, as in
+        # "Cairo (Family)".
+        return _("{city} ({label})").format(city=city_name, label=city.label)
     return city_name
 
 
-def _clock(at: datetime, fmt_24h: bool) -> str:
-    return at.strftime("%H:%M") if fmt_24h else at.strftime("%-I:%M %p").lstrip()
+def _columns(text: str) -> int:
+    """How many monospace columns `text` takes: two for each wide character.
+
+    Not len(): translated names in Chinese, Japanese or Korean are made of
+    characters a terminal or code block draws twice as wide, and padding them
+    by character count leaves the time column ragged.
+    """
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
 
 
 def zone_lines(model: ClockModel, instant: datetime, fmt_24h: bool) -> list[str]:
@@ -54,14 +64,15 @@ def zone_lines(model: ClockModel, instant: datetime, fmt_24h: bool) -> list[str]
     ref_date = tzinfo.local_now(ref.tz, instant).date()
 
     names = [_row_name(city) for city in model.cities]
-    width = max(len(name) for name in names) if names else 0
+    width = max(_columns(name) for name in names) if names else 0
 
     lines = []
     for city, name in zip(model.cities, names):
         local = tzinfo.local_now(city.tz, instant)
-        text = f"{name.ljust(width)}  {_clock(local, fmt_24h)}"
+        padding = " " * (width - _columns(name))
+        text = f"{name}{padding}  {format_clock(local, fmt_24h)}"
         if local.date() != ref_date:
-            text += f" ({local.strftime('%a, %b %-d')})"
+            text += f" ({format_day(local)})"
         lines.append(text)
     return lines
 
@@ -70,7 +81,7 @@ def clipboard_text(model: ClockModel, instant: datetime, fmt_24h: bool) -> str:
     ref = model.reference
     if ref is None:
         return ""
-    header = tzinfo.local_now(ref.tz, instant).strftime("%a, %b %-d %Y")
+    header = format_day_year(tzinfo.local_now(ref.tz, instant))
     return "\n".join([header, "", *zone_lines(model, instant, fmt_24h)])
 
 
@@ -123,10 +134,14 @@ def ics_text(model: ClockModel, instant: datetime, fmt_24h: bool) -> str:
     fmt = "%Y%m%dT%H%M%SZ"
 
     ref = model.reference
-    summary = "Meeting"
+    summary = _("Meeting")
     if ref is not None:
         local = tzinfo.local_now(ref.tz, instant)
-        summary = f"Meeting · {_clock(local, fmt_24h)} {tzinfo.city_name(ref.tz)}"
+        # Translators: the title of a saved calendar event, as in
+        # "Meeting · 15:00 London".
+        summary = _("Meeting · {time} {city}").format(
+            time=format_clock(local, fmt_24h), city=tzinfo.city_name(ref.tz)
+        )
 
     lines = [
         "BEGIN:VCALENDAR",

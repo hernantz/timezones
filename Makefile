@@ -13,6 +13,7 @@ run: build
 	@export PYTHONPATH="$$(pwd)"; \
 	export GSETTINGS_SCHEMA_DIR="$$(pwd)/$(BUILD)"; \
 	export TIMEZONES_BUILD_DIR="$(BUILD)"; \
+	export TIMEZONES_LOCALEDIR="$$(pwd)/$(BUILD)/po"; \
 	export TIMEZONES_DEV=1; \
 	$(PYTHON) -m $(ENTRY)
 
@@ -21,6 +22,12 @@ install: build
 
 clean:
 	rm -rf $(BUILD)
+
+# Regenerate po/timezones.pot from the sources, then merge it into every
+# po/<lang>.po, so translators start from the current strings.
+pot: build
+	meson compile -C $(BUILD) timezones-pot
+	meson compile -C $(BUILD) timezones-update-po
 
 # src/VERSION is the source of truth (meson and src/const.py both read it);
 # the rpm spec cannot read a file at parse time, so it is rewritten here.
@@ -40,4 +47,4 @@ release:
 	@echo "src/VERSION -> $(VERSION)"
 	@echo "review, then: git commit -am 'Release $(VERSION)' && git tag v$(VERSION)"
 
-.PHONY: setup build run install clean version release
+.PHONY: setup build run install clean pot version release

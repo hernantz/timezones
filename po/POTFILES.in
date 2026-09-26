@@ -1,0 +1,12 @@
+# Every file with a translatable string in it, relative to the project root.
+data/io.github.hernantz.timezones.desktop
+data/appdata/io.github.hernantz.timezones.metainfo.xml
+src/add_dialog.py
+src/app.py
+src/date_popover.py
+src/i18n.py
+src/main_window.py
+src/preferences.py
+src/row.py
+src/share.py
+src/tzinfo_helpers.py

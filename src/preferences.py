@@ -1,8 +1,19 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from gi.repository import Adw, GObject, Gtk
 
-_APPEARANCE_OPTIONS = [("system", "Follow system"), ("light", "Light"), ("dark", "Dark")]
+from .i18n import N_, _, format_clock
+
+_APPEARANCE_OPTIONS = [
+    ("system", N_("Follow system")),
+    ("light", N_("Light")),
+    ("dark", N_("Dark")),
+]
+
+# The hour the two format rows show off, so each reads as the clock it picks.
+_SAMPLE = datetime(2000, 1, 1, 13, 0)
 
 
 class PreferencesDialog(Adw.PreferencesDialog):
@@ -36,7 +47,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
     # -- Appearance -------------------------------------------------------
 
     def _build_appearance_group(self, theme_mode: str) -> Adw.PreferencesGroup:
-        group = Adw.PreferencesGroup(title="Appearance")
+        group = Adw.PreferencesGroup(title=_("Appearance"))
 
         row = Adw.PreferencesRow()
         row.set_activatable(False)
@@ -45,7 +56,8 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         self._theme_buttons: dict[str, Gtk.CheckButton] = {}
         group_leader: Gtk.CheckButton | None = None
-        for mode, title in _APPEARANCE_OPTIONS:
+        for mode, name in _APPEARANCE_OPTIONS:
+            title = _(name)
             button = Gtk.CheckButton(tooltip_text=title, group=group_leader)
             button.add_css_class(mode)
             button.update_property([Gtk.AccessibleProperty.LABEL], [title])
@@ -66,21 +78,21 @@ class PreferencesDialog(Adw.PreferencesDialog):
     # -- Time format --------------------------------------------------------
 
     def _build_time_format_group(self, fmt_24h: bool) -> Adw.PreferencesGroup:
-        group = Adw.PreferencesGroup(title="Time format")
+        group = Adw.PreferencesGroup(title=_("Time format"))
 
-        row_24 = Adw.ActionRow(title="24-hour")
+        row_24 = Adw.ActionRow(title=_("24-hour"))
         row_24.set_activatable(True)
         radio_24 = Gtk.CheckButton()
         row_24.add_prefix(radio_24)
-        row_24.add_suffix(Gtk.Label(label="13:00", css_classes=["dim-label"]))
+        row_24.add_suffix(Gtk.Label(label=format_clock(_SAMPLE, True), css_classes=["dim-label"]))
         row_24.set_activatable_widget(radio_24)
 
-        row_12 = Adw.ActionRow(title="12-hour (AM/PM)")
+        row_12 = Adw.ActionRow(title=_("12-hour (AM/PM)"))
         row_12.set_activatable(True)
         radio_12 = Gtk.CheckButton()
         radio_12.set_group(radio_24)
         row_12.add_prefix(radio_12)
-        row_12.add_suffix(Gtk.Label(label="1:00 PM", css_classes=["dim-label"]))
+        row_12.add_suffix(Gtk.Label(label=format_clock(_SAMPLE, False), css_classes=["dim-label"]))
         row_12.set_activatable_widget(radio_12)
 
         radio_24.set_active(fmt_24h)
@@ -103,24 +115,24 @@ class PreferencesDialog(Adw.PreferencesDialog):
     # -- View options ---------------------------------------------------------
 
     def _build_view_options_group(self, show_offsets: bool, show_daynight: bool) -> Adw.PreferencesGroup:
-        group = Adw.PreferencesGroup(title="View options")
+        group = Adw.PreferencesGroup(title=_("View options"))
 
         # Not a UTC offset: ClockModel.offset_hours() is measured against the
         # reference row, so the pill reads +2h for Cairo when London is home.
         offsets_row = Adw.SwitchRow(
-            title="Show offsets",
-            subtitle="Hours each city is ahead of or behind the reference",
+            title=_("Show offsets"),
+            subtitle=_("Hours each city is ahead of or behind the reference"),
         )
         offsets_row.set_active(show_offsets)
         offsets_row.connect("notify::active", lambda r, _p: self.emit("show-offsets-changed", r.get_active()))
         group.add(offsets_row)
 
-        daynight_row = Adw.SwitchRow(title="Show day / night colors")
+        daynight_row = Adw.SwitchRow(title=_("Show day / night colors"))
         daynight_row.set_active(show_daynight)
         daynight_row.connect("notify::active", lambda r, _p: self.emit("show-daynight-changed", r.get_active()))
         group.add(daynight_row)
 
-        reorder_row = Adw.ActionRow(title="Reorder timezones")
+        reorder_row = Adw.ActionRow(title=_("Reorder timezones"))
         reorder_row.set_activatable(True)
         reorder_row.add_suffix(Gtk.Image.new_from_icon_name("go-next-symbolic"))
         reorder_row.connect("activated", lambda *_a: self.emit("reorder-requested"))

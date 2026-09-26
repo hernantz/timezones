@@ -10,8 +10,14 @@ python_mod = import('python')
 python = python_mod.find_installation('python3')
 
 gnome = import('gnome')
+i18n = import('i18n')
 
 pkgdatadir = join_paths(get_option('prefix'), get_option('datadir'), meson.project_name())
+localedir = join_paths(get_option('prefix'), get_option('localedir'))
+
+# Translations: the catalog is named after the project ('timezones'), which is
+# also the gettext domain src/i18n.py binds.
+subdir('po')
 
 # Install Python sources
 install_data(
@@ -23,6 +29,7 @@ install_data(
   'src/__init__.py',
   'src/app.py',
   'src/const.py',
+  'src/i18n.py',
   'src/VERSION',
   'src/main_window.py',
   'src/model.py',
@@ -59,6 +66,7 @@ gnome.post_install(glib_compile_schemas: true, gtk_update_icon_cache: true, upda
 conf = configuration_data()
 conf.set('PYTHON', python.full_path())
 conf.set('pkgdatadir', pkgdatadir)
+conf.set('localedir', localedir)
 
 timezones_script = configure_file(
   input: 'bin/timezones.in',
@@ -80,12 +88,23 @@ install_data(
   install_dir: join_paths(get_option('datadir'), 'icons', 'hicolor', 'scalable', 'apps')
 )
 
-install_data(
-  'data' / app_id + '.desktop',
+#
+# Both go through the translations on the way: merge_file writes each language's
+# strings into the installed copy, which is how the shell and software centres
+# find a translated name and description.
+i18n.merge_file(
+  input: 'data' / app_id + '.desktop',
+  output: app_id + '.desktop',
+  type: 'desktop',
+  po_dir: 'po',
+  install: true,
   install_dir: join_paths(get_option('datadir'), 'applications')
 )
 
-install_data(
-  'data/appdata' / app_id + '.metainfo.xml',
+i18n.merge_file(
+  input: 'data/appdata' / app_id + '.metainfo.xml',
+  output: app_id + '.metainfo.xml',
+  po_dir: 'po',
+  install: true,
   install_dir: join_paths(get_option('datadir'), 'metainfo')
 )

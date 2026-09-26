@@ -5,7 +5,9 @@ import sys
 
 from gi.repository import Gio
 
+from . import i18n
 from .const import APP_ID, GRESOURCE_BUNDLE, RESOURCE_PREFIX
+from .i18n import _
 
 
 def _register_resources() -> None:
@@ -87,11 +89,16 @@ class App(Adw.Application):
         win.present()
 
 
-def main():
+def main(localedir: str | None = None):
+    # Before anything is built: every string is translated at the moment the
+    # widget showing it is made, so this only has to beat the first window.
+    # The launcher passes the installed locale dir; `make run` points the
+    # variable at the catalogs meson compiled into the build dir.
+    i18n.init(localedir or os.environ.get("TIMEZONES_LOCALEDIR"))
     # argv[0] would otherwise make the window show up as "python3": the shell
     # takes the Wayland app_id / X11 WM_CLASS from the program name.
     GLib.set_prgname(APP_ID)
-    GLib.set_application_name("Timezones")
+    GLib.set_application_name(_("Timezones"))
     app = App()
     return app.run(sys.argv)
 

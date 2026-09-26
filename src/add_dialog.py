@@ -7,6 +7,7 @@ from operator import itemgetter
 from gi.repository import Adw, GObject, Gtk
 
 from . import tzinfo_helpers as tzinfo
+from .i18n import _
 
 _MAX_RESULTS = 60  # rows shown for one query, and so the size the row pool tops out at
 
@@ -40,16 +41,28 @@ class _Entry:
         city = tzinfo.city_name(tz_id)
         country = tzinfo.country_name(tz_id)
         abbr = tzinfo.abbreviation(tz_id)
+        # The English names are searched too, joined on behind the translated
+        # ones: they are what a zone is called in every other app, and a
+        # German typing "Munich" should still find München. The ranking below
+        # only looks at the start of the string, so the translation still
+        # decides what counts as a prefix match.
+        english_city = tzinfo.english_city_name(tz_id)
+        english_country = tzinfo.english_country_name(tz_id)
         return cls(
             tz_id=tz_id,
             city=city,
             country=country,
             abbr=abbr,
-            city_lower=city.lower(),
-            country_lower=country.lower(),
+            city_lower=_searchable(city, english_city),
+            country_lower=_searchable(country, english_country),
             abbr_lower=abbr.lower(),
             id_lower=tz_id.lower(),
         )
+
+
+def _searchable(name: str, english: str) -> str:
+    folded = name.lower()
+    return folded if name == english else f"{folded}\n{english.lower()}"
 
 
 class _ResultRow:
@@ -125,7 +138,7 @@ class _ResultRow:
             "object-select-symbolic" if added else "list-add-symbolic"
         )
         self._btn.set_sensitive(not added)
-        self._btn.set_tooltip_text("Already added" if added else None)
+        self._btn.set_tooltip_text(_("Already added") if added else None)
         if added:
             self._btn.add_css_class("added")
         else:
@@ -145,7 +158,7 @@ class AddTimezoneDialog(Adw.Dialog):
 
     def __init__(self, existing: set[str]):
         super().__init__()
-        self.set_title("Add Timezone")
+        self.set_title(_("Add Timezone"))
         self.set_content_width(420)
         self.set_content_height(520)
         self._existing = existing
@@ -164,7 +177,7 @@ class AddTimezoneDialog(Adw.Dialog):
 
         self._search = Gtk.SearchEntry()
         self._search.add_css_class("tz-search-entry")
-        self._search.set_placeholder_text("Search for a city or timezone")
+        self._search.set_placeholder_text(_("Search for a city or timezone"))
         self._search.connect("search-changed", self._on_search_changed)
         # Escape would otherwise be dead here: the entry has a class binding
         # of Escape to stop-search, which sits below the dialog's own close
@@ -174,7 +187,7 @@ class AddTimezoneDialog(Adw.Dialog):
         self._search.connect("stop-search", lambda *_a: self.close())
         body.append(self._search)
 
-        self._results_label = Gtk.Label(label="RESULTS", xalign=0)
+        self._results_label = Gtk.Label(label=_("Results").upper(), xalign=0)
         self._results_label.add_css_class("tz-results-label")
         self._results_label.set_margin_top(4)
         body.append(self._results_label)
@@ -207,8 +220,8 @@ class AddTimezoneDialog(Adw.Dialog):
         status.add_css_class("tz-empty-state")
         status.add_css_class("compact")
         status.set_icon_name("system-search-symbolic")
-        status.set_title("No Results")
-        status.set_description("Try a different city, country, or timezone name.")
+        status.set_title(_("No Results"))
+        status.set_description(_("Try a different city, country, or timezone name."))
         return status
 
     def _on_search_changed(self, entry: Gtk.SearchEntry) -> None:
@@ -234,7 +247,7 @@ class AddTimezoneDialog(Adw.Dialog):
         shown = matches[:_MAX_RESULTS]
 
         at = datetime.now().astimezone()
-        for i, (_, _, entry) in enumerate(shown):
+        for i, (_rank, _key, entry) in enumerate(shown):
             if i == len(self._rows):
                 row = _ResultRow(self)
                 self._rows.append(row)

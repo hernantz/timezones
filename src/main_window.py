@@ -9,6 +9,7 @@ from . import tzinfo_helpers as tzinfo
 from .add_dialog import AddTimezoneDialog
 from .const import APP_ID, VERSION
 from .date_popover import DatePopover
+from .i18n import C_, N_, _, format_clock, format_day, ngettext
 from .model import City, ClockModel
 from .persistence import Settings, load_cities, save_cities
 from .preferences import PreferencesDialog
@@ -19,10 +20,12 @@ from .timeline import TimelineStrip
 _SCRUB_STEP = 0.25  # 15 minutes, matches _snap_column()
 _MAX_COLUMN = 24.0 - _SCRUB_STEP  # 23:45 — last snappable slot still inside the day
 
+# Labels are marked here and translated when the defaults are copied: from
+# then on they are the user's own text, saved as whatever language they were in.
 _DEFAULT_CITIES = [
-    City(tz="Europe/London", label="You", is_reference=True),
-    City(tz="Africa/Cairo", label="Family"),
-    City(tz="Europe/Moscow", label="Team"),
+    City(tz="Europe/London", label=N_("You"), is_reference=True),
+    City(tz="Africa/Cairo", label=N_("Family")),
+    City(tz="Europe/Moscow", label=N_("Team")),
     City(tz="Pacific/Auckland"),
 ]
 
@@ -105,7 +108,10 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._removed_reference: City | None = None
         self._removed_toast: Adw.Toast | None = None
 
-        defaults = [City(tz=d.tz, label=d.label, is_reference=d.is_reference) for d in _DEFAULT_CITIES]
+        defaults = [
+            City(tz=d.tz, label=_(d.label) if d.label else "", is_reference=d.is_reference)
+            for d in _DEFAULT_CITIES
+        ]
         cities = load_cities(defaults)
         self._model = ClockModel(cities)
 
@@ -129,20 +135,20 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         header.add_css_class("tz-headerbar")
         header.set_decoration_layout(":close")
 
-        title_label = Gtk.Label(label="Timezones")
+        title_label = Gtk.Label(label=_("Timezones"))
         title_label.add_css_class("title")
         header.set_title_widget(title_label)
 
         add_btn = Gtk.Button()
         add_btn.set_icon_name("list-add-symbolic")
-        add_btn.set_tooltip_text("Add Timezone")
+        add_btn.set_tooltip_text(_("Add Timezone"))
         add_btn.add_css_class("flat")
         add_btn.set_action_name("win.new")
         header.pack_start(add_btn)
 
         self._date_btn = Gtk.MenuButton()
         self._date_btn.set_icon_name("x-office-calendar-symbolic")
-        self._date_btn.set_tooltip_text("Jump to Date")
+        self._date_btn.set_tooltip_text(_("Jump to Date"))
         self._date_btn.add_css_class("flat")
         self._date_popover = DatePopover()
         self._date_popover.connect("date-selected", self._on_date_selected)
@@ -152,8 +158,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         # Only an escape hatch: hidden while the window already shows today,
         # so it reads as "you are somewhere else" rather than as a permanent
         # control.
-        self._today_btn = Gtk.Button(label="Today")
-        self._today_btn.set_tooltip_text("Back to Today")
+        self._today_btn = Gtk.Button(label=_("Today"))
+        self._today_btn.set_tooltip_text(_("Back to Today"))
         self._today_btn.add_css_class("flat")
         self._today_btn.add_css_class("tz-today-btn")
         self._today_btn.set_visible(False)
@@ -161,8 +167,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         header.pack_start(self._today_btn)
 
         self._fmt_group = Adw.ToggleGroup()
-        toggle_24 = Adw.Toggle(name="24h", label="24h")
-        toggle_12 = Adw.Toggle(name="12h", label="12h")
+        toggle_24 = Adw.Toggle(name="24h", label=C_("clock format", "24h"))
+        toggle_12 = Adw.Toggle(name="12h", label=C_("clock format", "12h"))
         self._fmt_group.add(toggle_24)
         self._fmt_group.add(toggle_12)
         self._fmt_group.set_active_name("24h" if self._fmt_24h else "12h")
@@ -293,7 +299,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._selection_label.set_ellipsize(Pango.EllipsizeMode.END)
 
         close = self._selection_button(
-            "window-close-symbolic", "Discard selected time", self._on_unpin_requested
+            "window-close-symbolic", _("Discard selected time"), self._on_unpin_requested
         )
 
         # The two hand-offs sit at the start and the discard stays at the end:
@@ -309,17 +315,21 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         actions.append(
             self._selection_button(
                 "edit-copy-symbolic",
-                "Copy all times to the clipboard",
+                _("Copy all times to the clipboard"),
                 self._on_copy_selection,
-                label="Copy",
+                label=_("Copy"),
             )
         )
         actions.append(
             self._selection_button(
                 "x-office-calendar-symbolic",
-                f"Save a {EVENT_MINUTES}-minute event to your calendar",
+                ngettext(
+                    "Save a {n}-minute event to your calendar",
+                    "Save a {n}-minute event to your calendar",
+                    EVENT_MINUTES,
+                ).format(n=EVENT_MINUTES),
                 self._on_calendar_selection,
-                label="Save event",
+                label=_("Save event"),
             )
         )
 
@@ -389,7 +399,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         if not text:
             return
         self.get_clipboard().set(text)
-        self._toasts.add_toast(Adw.Toast.new("Times copied"))
+        self._toasts.add_toast(Adw.Toast.new(_("Times copied")))
 
     def _on_calendar_selection(self, _button: Gtk.Button) -> None:
         instant = self._selected_instant()
@@ -398,13 +408,15 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         try:
             file = write_ics(self._model, instant, self._fmt_24h)
         except OSError as error:
-            self._toasts.add_toast(Adw.Toast.new(f"Couldn't write the event: {error.strerror}"))
+            self._toasts.add_toast(
+                Adw.Toast.new(_("Couldn't write the event: {error}").format(error=error.strerror))
+            )
             return
         launch_ics(
             self,
             file,
             lambda message: self._toasts.add_toast(
-                Adw.Toast.new(f"Couldn't open a calendar: {message}")
+                Adw.Toast.new(_("Couldn't open a calendar: {error}").format(error=message))
             ),
         )
 
@@ -412,10 +424,10 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         status = Adw.StatusPage()
         status.add_css_class("tz-empty-state")
         status.set_icon_name("globe-symbolic")
-        status.set_title("No Timezones")
-        status.set_description("Add a city to keep track of the time where it matters to you.")
+        status.set_title(_("No Timezones"))
+        status.set_description(_("Add a city to keep track of the time where it matters to you."))
 
-        btn = Gtk.Button(label="Add Timezone")
+        btn = Gtk.Button(label=_("Add Timezone"))
         btn.add_css_class("pill")
         btn.add_css_class("suggested-action")
         btn.set_halign(Gtk.Align.CENTER)
@@ -425,12 +437,13 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
     def _build_menu_button(self) -> Gtk.MenuButton:
         menu = Gio.Menu()
-        menu.append("Preferences", "win.preferences")
-        menu.append("Keyboard Shortcuts", "win.shortcuts")
-        menu.append("About Timezones", "win.about")
+        menu.append(_("Preferences"), "win.preferences")
+        menu.append(_("Keyboard Shortcuts"), "win.shortcuts")
+        menu.append(_("About Timezones"), "win.about")
 
         btn = Gtk.MenuButton()
         btn.set_icon_name("open-menu-symbolic")
+        btn.set_tooltip_text(_("Main Menu"))
         btn.add_css_class("flat")
         btn.set_menu_model(menu)
         return btn
@@ -582,8 +595,9 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         # is keyed to — each row states the same instant in its own terms
         # just below.
         local = tzinfo.local_now(ref.tz, instant)
-        time_text = local.strftime("%H:%M") if self._fmt_24h else local.strftime("%-I:%M %p")
-        self._selection_label.set_label(f"{local.strftime('%a, %b %-d')} · {time_text}")
+        self._selection_label.set_label(
+            f"{format_day(local)} · {format_clock(local, self._fmt_24h)}"
+        )
         self._selection_bar.set_reveal_child(True)
 
     def _timeline_at(self, x: float, y: float) -> TimelineStrip | None:
@@ -838,14 +852,17 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._rebuild_rows()
 
     def _on_row_edit_label(self, row: TimezoneRow) -> None:
-        dialog = Adw.AlertDialog(heading="Edit label", body=f"Set a label for {tzinfo.city_name(row.city.tz)}")
+        dialog = Adw.AlertDialog(
+            heading=_("Edit label"),
+            body=_("Set a label for {city}").format(city=tzinfo.city_name(row.city.tz)),
+        )
         entry = Gtk.Entry()
         entry.set_text(row.city.label)
         entry.set_activates_default(True)
         dialog.set_extra_child(entry)
-        dialog.add_response("cancel", "Cancel")
-        dialog.add_response("clear", "Clear")
-        dialog.add_response("save", "Save")
+        dialog.add_response("cancel", _("_Cancel"))
+        dialog.add_response("clear", _("C_lear"))
+        dialog.add_response("save", _("_Save"))
         dialog.set_response_appearance("save", Adw.ResponseAppearance.SUGGESTED)
         dialog.set_default_response("save")
         dialog.set_close_response("cancel")
@@ -894,14 +911,17 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _show_removed_toast(self) -> None:
         # One toast for a run of removals, retitled in place, rather than a
         # queue of toasts each waiting out its own timeout.
-        if len(self._removed) == 1:
-            title = f"Removed {tzinfo.city_name(self._removed[0][1].tz)}"
+        count = len(self._removed)
+        if count == 1:
+            title = _("Removed {city}").format(city=tzinfo.city_name(self._removed[0][1].tz))
         else:
-            title = f"Removed {len(self._removed)} timezones"
+            title = ngettext(
+                "Removed {n} timezone", "Removed {n} timezones", count
+            ).format(n=count)
         toast = self._removed_toast
         if toast is None:
             toast = Adw.Toast.new(title)
-            toast.set_button_label("_Undo")
+            toast.set_button_label(_("_Undo"))
             toast.set_use_markup(False)
             toast.connect("button-clicked", self._on_undo_remove)
             toast.connect("dismissed", self._on_removed_toast_dismissed)
@@ -967,26 +987,35 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         dialog.present(self)
 
     def _on_shortcuts(self, *_args) -> None:
+        shortcuts = (
+            (_("Add timezone"), "Ctrl+N"),
+            (_("Back to today"), "Ctrl+T"),
+            (_("Preferences"), "Ctrl+,"),
+            (_("Quit"), "Ctrl+Q"),
+        )
         dialog = Adw.AlertDialog(
-            heading="Keyboard Shortcuts",
-            body=(
-                "Add timezone: Ctrl+N\n"
-                "Back to today: Ctrl+T\n"
-                "Preferences: Ctrl+,\n"
-                "Quit: Ctrl+Q"
+            heading=_("Keyboard Shortcuts"),
+            body="\n".join(
+                # Translators: a line of the keyboard shortcuts list, as in
+                # "Quit: Ctrl+Q".
+                _("{action}: {keys}").format(action=action, keys=keys)
+                for action, keys in shortcuts
             ),
         )
-        dialog.add_response("ok", "Close")
+        dialog.add_response("ok", _("_Close"))
         dialog.present(self)
 
     def _on_about(self, *_args) -> None:
         about = Adw.AboutDialog(
-            application_name="Timezones",
+            application_name=_("Timezones"),
             application_icon=APP_ID,
             version=VERSION,
             developer_name="Hernan Lozano",
             license_type=Gtk.License.GPL_3_0,
-            comments="Keep track of the time in cities that matter to you.",
+            comments=_("Keep track of the time in cities that matter to you."),
+            # Translators: replace with your name, and your email address if
+            # you like, one translator per line.
+            translator_credits=_("translator-credits"),
         )
         about.present(self)
 
@@ -995,7 +1024,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
     def _open_reorder_dialog(self) -> None:
         dialog = Adw.Dialog()
-        dialog.set_title("Reorder Timezones")
+        dialog.set_title(_("Reorder Timezones"))
         dialog.set_content_width(360)
         dialog.set_content_height(440)
 
@@ -1019,9 +1048,11 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             for i, city in enumerate(self._model.cities):
                 tz_row = Adw.ActionRow(title=tzinfo.city_name(city.tz), subtitle=city.tz)
                 up_btn = Gtk.Button.new_from_icon_name("go-up-symbolic")
+                up_btn.set_tooltip_text(_("Move up"))
                 up_btn.add_css_class("flat")
                 up_btn.set_sensitive(i > 0)
                 down_btn = Gtk.Button.new_from_icon_name("go-down-symbolic")
+                down_btn.set_tooltip_text(_("Move down"))
                 down_btn.add_css_class("flat")
                 down_btn.set_sensitive(i < n - 1)
 

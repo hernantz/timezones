@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import calendar
-from datetime import date
+from datetime import date, datetime
 
 from gi.repository import GObject, Gtk
 
-_WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"]
-_MONTH_NAMES = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-]
+from .i18n import C_, first_weekday, format_month_year
 
 
 class DatePopover(Gtk.Popover):
@@ -26,6 +22,8 @@ class DatePopover(Gtk.Popover):
         self._selected = self._today
         self._view_year = self._today.year
         self._view_month = self._today.month
+        # Read once: the locale does not change under a running app.
+        self._first_weekday = first_weekday()
 
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         root.set_margin_top(12)
@@ -57,7 +55,8 @@ class DatePopover(Gtk.Popover):
         root.append(header)
 
         weekday_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, homogeneous=True)
-        for wd in _WEEKDAY_INITIALS:
+        initials = _weekday_initials()
+        for wd in initials[self._first_weekday:] + initials[: self._first_weekday]:
             lbl = Gtk.Label(label=wd)
             lbl.add_css_class("tz-cal-weekday")
             weekday_row.append(lbl)
@@ -97,7 +96,9 @@ class DatePopover(Gtk.Popover):
         self.emit("date-selected", d.year, d.month, d.day)
 
     def _render(self) -> None:
-        self._month_label.set_label(f"{_MONTH_NAMES[self._view_month - 1]} {self._view_year}")
+        self._month_label.set_label(
+            format_month_year(datetime(self._view_year, self._view_month, 1))
+        )
 
         child = self._grid.get_first_child()
         while child is not None:
@@ -105,7 +106,7 @@ class DatePopover(Gtk.Popover):
             self._grid.remove(child)
             child = nxt
 
-        cal = calendar.Calendar(firstweekday=0)
+        cal = calendar.Calendar(firstweekday=self._first_weekday)
         weeks = cal.monthdatescalendar(self._view_year, self._view_month)
         for row_idx, week in enumerate(weeks):
             for col_idx, day in enumerate(week):
@@ -120,3 +121,29 @@ class DatePopover(Gtk.Popover):
                     btn.add_css_class("selected")
                 btn.connect("clicked", lambda _b, d=day: self._select(d))
                 self._grid.attach(btn, col_idx, row_idx, 1, 1)
+
+
+def _weekday_initials() -> list[str]:
+    """The column headings, Monday first, as calendar numbers the days; the
+    popover rotates them to start wherever the locale's week does.
+
+    Translated rather than cut from the locale's weekday names: the first
+    letter of an abbreviation is not an initial everywhere — in Chinese every
+    one of them starts with 周.
+    """
+    return [
+        # Translators: calendar column heading, the initial of Monday.
+        C_("Monday initial", "M"),
+        # Translators: calendar column heading, the initial of Tuesday.
+        C_("Tuesday initial", "T"),
+        # Translators: calendar column heading, the initial of Wednesday.
+        C_("Wednesday initial", "W"),
+        # Translators: calendar column heading, the initial of Thursday.
+        C_("Thursday initial", "T"),
+        # Translators: calendar column heading, the initial of Friday.
+        C_("Friday initial", "F"),
+        # Translators: calendar column heading, the initial of Saturday.
+        C_("Saturday initial", "S"),
+        # Translators: calendar column heading, the initial of Sunday.
+        C_("Sunday initial", "S"),
+    ]

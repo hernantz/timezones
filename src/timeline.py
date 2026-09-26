@@ -6,10 +6,10 @@ from datetime import datetime
 from gi.repository import Gdk, Gtk
 
 from . import tzinfo_helpers as tzinfo
+from .i18n import format_date_flag
 from .model import COLUMNS as _COLUMNS
 from .model import City, ClockModel
 
-_WEEKDAY = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 _LABEL_EDGE_INSET = 3  # px kept clear between a date-flag label and the strip's own edge
 _LABEL_GAP = 4  # px kept clear between the two date-flag labels when they'd otherwise overlap
 _LABEL_TOP = 2  # px between a date-flag label and the top of the strip
@@ -438,6 +438,13 @@ class TimelineStrip(Gtk.Overlay):
         self._row.set_row_homogeneous(True)
         self._row.add_css_class("tz-timeline")
         self._row.set_hexpand(True)
+        # Time runs left to right on this strip in every language. Mirrored
+        # for a right-to-left UI, the grid would put midnight on the right
+        # while the pills, the cursors and the pointer-to-hour math — all
+        # plain x offsets from the left — kept reading it from the left. Set
+        # on the grid itself: GTK 4 falls back to the global default, not to
+        # the parent, for a widget with no direction of its own.
+        self._row.set_direction(Gtk.TextDirection.LTR)
         # Clipped so the strip can be given rounded corners of its own: stacked,
         # the grid *is* the bottom edge of the card, and the cells paint their
         # tints right into the corner. Without this they square off the curve
@@ -536,7 +543,7 @@ class TimelineStrip(Gtk.Overlay):
                 flags.append(
                     (
                         col,
-                        f"{_WEEKDAY[row_dt.weekday()]} {row_dt.day}",
+                        format_date_flag(row_dt),
                         row_dt.date() != reference_date,
                     )
                 )

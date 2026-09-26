@@ -18,6 +18,7 @@ BuildRequires:  libadwaita-devel >= 1.7
 BuildRequires:  gtk4-devel
 BuildRequires:  pkgconfig
 BuildRequires:  desktop-file-utils
+BuildRequires:  gettext
 
 Requires:       python3
 Requires:       python3-gobject
@@ -31,6 +32,11 @@ Requires:       libadwaita >= 1.7
 # Both come from tzdata; named explicitly because this package now depends on
 # those two files being present, not merely on the compiled zones.
 Requires:       tzdata
+
+# Translated city and country names. Both are read as plain gettext catalogs,
+# so without them the app still works, only with the English names.
+Recommends:     gweather-locations
+Recommends:     iso-codes
 
 %description
 World time clocks with native GTK4 UI.
@@ -46,11 +52,12 @@ World time clocks with native GTK4 UI.
 
 %install
 %meson_install
+%find_lang %{name}
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/io.github.hernantz.timezones.desktop
 
-%files
+%files -f %{name}.lang
 %license LICENSE*
 %doc README* 
 
