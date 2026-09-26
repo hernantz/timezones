@@ -9,7 +9,7 @@ from . import tzinfo_helpers as tzinfo
 from .add_dialog import AddTimezoneDialog
 from .const import APP_ID, VERSION
 from .date_popover import DatePopover
-from .i18n import C_, N_, _, format_clock, format_day, ngettext
+from .i18n import C_, N_, _, format_clock, format_day, format_day_year, ngettext
 from .model import City, ClockModel
 from .persistence import Settings, load_cities, save_cities
 from .preferences import PreferencesDialog
@@ -595,9 +595,10 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         # is keyed to — each row states the same instant in its own terms
         # just below.
         local = tzinfo.local_now(ref.tz, instant)
-        self._selection_label.set_label(
-            f"{format_day(local)} · {format_clock(local, self._fmt_24h)}"
-        )
+        # The year only once the calendar has carried the view out of this
+        # one: nothing else on screen says which year is being planned for.
+        day = format_day(local) if local.year == date.today().year else format_day_year(local)
+        self._selection_label.set_label(f"{day} · {format_clock(local, self._fmt_24h)}")
         self._selection_bar.set_reveal_child(True)
 
     def _timeline_at(self, x: float, y: float) -> TimelineStrip | None:
