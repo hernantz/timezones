@@ -186,6 +186,13 @@ headerbar.tz-headerbar .title {
   font-weight: 700;
 }
 
+/* A compact strip's stand-in for the hours it leaves unnumbered: still in the
+   tone's color, so the day/night reading carries on through it, but faded so
+   the numbers either side are what the eye lands on. */
+.tz-cell-label.dot {
+  opacity: 0.55;
+}
+
 /* Tone lives on the slot as well as on the painted background, because the
    hour label is a sibling of that background rather than a child of it —
    see TimelineStrip._make_cell for why. */

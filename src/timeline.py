@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import weakref
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -15,6 +16,10 @@ _LABEL_GAP = 4  # px kept clear between the two date-flag labels when they'd oth
 _LABEL_TOP = 2  # px between a date-flag label and the top of the strip
 _CAP_MARGIN_START = 6  # px; must match .tz-cell.cap-start margin-left in style.css
 _LINE_WIDTH = 2  # px; the now/scrub cursors are both this wide
+# Below this much width per column the hour numbers run into each other (the
+# widest, "22", is ~12px at the label's 9.5px bold), so the strip goes compact:
+# every other column keeps its number and the rest show a dot.
+_COMPACT_COLUMN_WIDTH = 17
 
 # The strip is exactly _COLUMNS equal cells (see model.COLUMNS for why that
 # count never varies). Cell C is the one-hour block [C, C+1) of the reference
@@ -307,7 +312,7 @@ class _Cell:
     visibly pulls back.
     """
 
-    __slots__ = ("slot", "base", "label", "rule", "marker", "spec")
+    __slots__ = ("slot", "base", "label", "rule", "marker", "spec", "label_shown")
 
     def __init__(self, spec: _CellSpec) -> None:
         self.spec = spec
@@ -340,6 +345,7 @@ class _Cell:
         # overlay child doesn't do by default — otherwise the strip would
         # happily shrink until the hours were unreadable.
         self.slot.set_measure_overlay(self.label, True)
+        self.label_shown = True
 
         self.rule: Gtk.Widget | None = None
         self.marker: Gtk.Widget | None = None
@@ -354,7 +360,7 @@ class _Cell:
         if spec == old:
             return
 
-        if spec.hour_label != old.hour_label:
+        if spec.hour_label != old.hour_label and self.label_shown:
             self.label.set_label(spec.hour_label)
 
         if spec.tone != old.tone:
@@ -385,6 +391,21 @@ class _Cell:
                 self._add_marker(spec.marker)
 
         self.spec = spec
+
+    def show_label(self, shown: bool) -> None:
+        """Show the hour number, or stand a dot in for it on a compact strip.
+
+        Kept apart from the spec: whether a number fits is a matter of the
+        strip's width, which changes without the hour behind it changing.
+        """
+        if shown == self.label_shown:
+            return
+        self.label_shown = shown
+        self.label.set_label(self.spec.hour_label if shown else "\u00b7")
+        if shown:
+            self.label.remove_css_class("dot")
+        else:
+            self.label.add_css_class("dot")
 
     def _add_rule(self) -> None:
         # The dashed rule marks the seam itself: overlaid flush against the
@@ -422,12 +443,34 @@ class _Cell:
         self.marker = marker
 
 
+class _StripLayout(Gtk.OverlayLayout):
+    """The overlay's own layout, plus a word to the strip about its width.
+
+    GtkOverlay allocates through its layout manager, so a `do_size_allocate`
+    on the strip itself is never called; this is the one place that learns the
+    width in the same pass that hands it out.
+    """
+
+    def __init__(self, on_allocate) -> None:
+        super().__init__()
+        # Weak, because the strip owns this layout: a strong bound method would
+        # close a cycle through two GObjects and keep a removed row alive.
+        self._on_allocate = weakref.WeakMethod(on_allocate)
+
+    def do_allocate(self, widget: Gtk.Widget, width: int, height: int, baseline: int) -> None:
+        callback = self._on_allocate()
+        if callback is not None:
+            callback(width)
+        Gtk.OverlayLayout.do_allocate(self, widget, width, height, baseline)
+
+
 class TimelineStrip(Gtk.Overlay):
     __gtype_name__ = "TimezonesTimelineStrip"
 
     def __init__(self):
         super().__init__()
         self.set_hexpand(True)
+        self.set_layout_manager(_StripLayout(self._on_allocate))
 
         # A homogeneous 24-column grid, always — no row ever has an extra
         # sibling widget eating into the shared width, so every row divides
@@ -481,6 +524,41 @@ class TimelineStrip(Gtk.Overlay):
         self._cells: list[_Cell] | None = None
         self._cell_widgets: list[Gtk.Widget] = [None] * _COLUMNS  # type: ignore[list-item]
         self._flag_key: tuple | None = None
+        self._boundary = 0
+        self._compact = False
+
+    def _on_allocate(self, width: int) -> None:
+        # Decided on the width actually handed out rather than on the window's
+        # breakpoint: stacked or side by side, the strip's share of the window
+        # differs. Dots are never wider than the numbers they replace, so going
+        # compact can't raise the strip's minimum and talk itself back out.
+        compact = 0 < width < _COMPACT_COLUMN_WIDTH * _COLUMNS
+        if compact != self._compact:
+            self._compact = compact
+            self._show_labels()
+
+    def _show_labels(self) -> None:
+        """Number every other column on a compact strip, every column otherwise.
+
+        Thinned by column, not by local hour, so a column is numbered in every
+        row or in none and the grid still reads straight down. The day break is
+        the exception: it always keeps its number — it is the hour the date
+        pill above it is anchored to — and its neighbours give theirs up so it
+        doesn't end up crowded all over again.
+        """
+        if self._cells is None:
+            return
+        boundary = self._boundary
+        for col, cell in enumerate(self._cells):
+            if not self._compact:
+                shown = True
+            elif boundary != 0 and col == boundary:
+                shown = True
+            elif boundary != 0 and abs(col - boundary) == 1:
+                shown = False
+            else:
+                shown = col % 2 == 0
+            cell.show_label(shown)
 
     def set_now(self, column: float | None) -> None:
         """Draw (or hide) the ambient now-line at `column` hours into the day."""
@@ -579,9 +657,14 @@ class TimelineStrip(Gtk.Overlay):
             for col, cell in enumerate(self._cells):
                 self._row.attach(cell.slot, col, 0, 1, 1)
             self._cell_widgets = [cell.slot for cell in self._cells]
+            self._boundary = boundary
+            self._show_labels()
         else:
             for cell, spec in zip(self._cells, specs):
                 cell.apply(spec)
+            if boundary != self._boundary:
+                self._boundary = boundary
+                self._show_labels()
 
         self._set_flags(flags, boundary)
 
