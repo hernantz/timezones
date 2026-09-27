@@ -112,6 +112,6 @@ i18n.merge_file(
 # The GPL asks that the licence travel with the program; this is also where
 # Flatpak and distribution packaging expect to find it.
 install_data(
-  'COPYING',
+  'LICENSE',
   install_dir: join_paths(get_option('datadir'), 'licenses', app_id)
 )
