@@ -822,7 +822,10 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _on_timezone_added(self, _dialog: AddTimezoneDialog, tz_id: str) -> None:
         if any(c.tz == tz_id for c in self._model.cities):
             return
-        self._model.cities.append(City(tz=tz_id))
+        # The first zone added to an empty list has to carry the reference flag
+        # itself: `ClockModel.reference` would fall back to it anyway, but the
+        # row's styling and the saved file read the flag, not the fallback.
+        self._model.cities.append(City(tz=tz_id, is_reference=not self._model.cities))
         self._persist()
         self._rebuild_rows()
 
@@ -900,8 +903,12 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             self._removed_reference = self._model.reference
         self._removed.append((cities.index(city), city))
         cities.remove(city)
-        if city.is_reference and cities:
-            city.is_reference = False
+        # Cleared even when the list is left empty: a stale flag riding along
+        # in `_removed` would make undo bring back a second reference next to
+        # a zone added from the empty state in the meantime.
+        was_reference = city.is_reference
+        city.is_reference = False
+        if was_reference and cities:
             cities[0].is_reference = True
         # Saved now, not when the toast goes away: quitting with the toast
         # still up must not bring the row back on the next launch.

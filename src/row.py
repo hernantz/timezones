@@ -79,7 +79,7 @@ class TimezoneRow(Gtk.Box):
         identity.set_margin_bottom(14)
         identity.set_margin_start(2)
         identity.set_margin_end(16)
-        identity.set_valign(Gtk.Align.CENTER)
+        identity.set_valign(Gtk.Align.BASELINE_CENTER)
 
         # Ellipsized, all three of them: a label's minimum width is otherwise
         # its whole text, so one long city name or user label would set a floor
@@ -109,8 +109,11 @@ class TimezoneRow(Gtk.Box):
         identity.append(self._name_line)
         identity.append(self._subtitle_label)
         identity.append(self._chip)
-        # The city name, not the subtitle or the chip, is what the time lines
-        # up with when the row stacks.
+        # Line for line, the identity and time columns are read as a pair —
+        # name beside time, subtitle beside date, chip beside offset — so the
+        # two share a baseline rather than each being centred on its own:
+        # centring two columns of different heights leaves them a few pixels
+        # apart, and by a different amount in every row.
         identity.set_baseline_child(0)
         self._identity = identity
         self._head.append(identity)
@@ -122,7 +125,7 @@ class TimezoneRow(Gtk.Box):
         time_block.set_margin_top(14)
         time_block.set_margin_bottom(14)
         time_block.set_halign(Gtk.Align.END)
-        time_block.set_valign(Gtk.Align.CENTER)
+        time_block.set_valign(Gtk.Align.BASELINE_CENTER)
 
         self._time_label = Gtk.Label(xalign=1)
         self._time_label.add_css_class("tz-time-big")
@@ -259,14 +262,6 @@ class TimezoneRow(Gtk.Box):
             self._identity.set_hexpand(True)
             self._time_block.set_hexpand(False)
             self._head.set_margin_bottom(2)
-            # Side by side on one line, the city and its time are read as a
-            # pair, so they sit on a shared baseline rather than each being
-            # centred inside its own stack: centring two columns of different
-            # heights leaves the name floating somewhere between the time and
-            # its date. The wide row has the divider and its own column widths
-            # to hold the two apart, and keeps plain centring.
-            self._identity.set_valign(Gtk.Align.BASELINE_CENTER)
-            self._time_block.set_valign(Gtk.Align.BASELINE_CENTER)
         else:
             self._head.remove(self._end_box)
             self._card.set_orientation(Gtk.Orientation.HORIZONTAL)
@@ -277,8 +272,6 @@ class TimezoneRow(Gtk.Box):
             self._identity.set_size_request(180, -1)
             self._identity.set_hexpand(False)
             self._head.set_margin_bottom(0)
-            self._identity.set_valign(Gtk.Align.CENTER)
-            self._time_block.set_valign(Gtk.Align.CENTER)
 
     def set_move_enabled(self, up: bool, down: bool) -> None:
         self._move_up_action.set_enabled(up)
