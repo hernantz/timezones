@@ -1,6 +1,6 @@
 # The version lives in src/VERSION, beside the code that reads it (src/const.py);
 # it is installed with the package so both the source tree and an install agree.
-project('timezones', version: files('src/VERSION'))
+project('timezones', version: files('src/VERSION'), license: 'GPL-3.0-or-later')
 
 # The desktop entry, GSettings schema, icon and resource bundle are all named
 # after the application id; src/const.py holds the same value for the Python side.
@@ -107,4 +107,11 @@ i18n.merge_file(
   po_dir: 'po',
   install: true,
   install_dir: join_paths(get_option('datadir'), 'metainfo')
+)
+
+# The GPL asks that the licence travel with the program; this is also where
+# Flatpak and distribution packaging expect to find it.
+install_data(
+  'COPYING',
+  install_dir: join_paths(get_option('datadir'), 'licenses', app_id)
 )
