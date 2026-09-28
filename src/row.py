@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from gi.repository import Gdk, Gio, GLib, GObject, Graphene, Gtk, Pango
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gtk, Pango
 
 from . import tzinfo_helpers as tzinfo
 from .i18n import _, format_day, meridiem, twelve_hour
@@ -14,6 +14,10 @@ _DRAG_MIME = "application/x-timezones-row"
 # The row currently being dragged, so every other row can tell "the pointer is
 # carrying me" from "the pointer is carrying someone else".
 _drag_row: "TimezoneRow | None" = None
+
+# The name column's width in the wide layout, the same in every row so every
+# timeline starts at the same x.
+_IDENTITY_WIDTH = 180
 
 
 class TimezoneRow(Gtk.Box):
@@ -74,7 +78,7 @@ class TimezoneRow(Gtk.Box):
         # 2. identity block
         identity = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         identity.add_css_class("tz-identity")
-        identity.set_size_request(180, -1)
+        identity.set_size_request(_IDENTITY_WIDTH, -1)
         identity.set_margin_top(14)
         identity.set_margin_bottom(14)
         identity.set_margin_start(2)
@@ -91,15 +95,22 @@ class TimezoneRow(Gtk.Box):
         self._city_label.set_halign(Gtk.Align.START)
         self._city_label.set_ellipsize(Pango.EllipsizeMode.END)
 
+        # The subtitle wraps instead: "United States · EDT → EST · UTC−4 →
+        # UTC−5" is the one line long enough to matter, and cut short it loses
+        # the offsets it exists to show.
         self._subtitle_label = Gtk.Label(xalign=0)
         self._subtitle_label.add_css_class("tz-subtitle")
         self._subtitle_label.set_halign(Gtk.Align.START)
-        self._subtitle_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self._subtitle_label.set_wrap(True)
+        self._subtitle_label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
 
         self._chip = Gtk.Label(xalign=0)
         self._chip.add_css_class("tz-chip")
         self._chip.set_halign(Gtk.Align.START)
-        self._chip.set_ellipsize(Pango.EllipsizeMode.END)
+        # A label is the user's own words, so it wraps rather than being cut
+        # short — the row grows taller for it, never wider.
+        self._chip.set_wrap(True)
+        self._chip.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
         self._chip.set_margin_top(2)
         self._chip.set_visible(False)
 
@@ -116,7 +127,17 @@ class TimezoneRow(Gtk.Box):
         # apart, and by a different amount in every row.
         identity.set_baseline_child(0)
         self._identity = identity
-        self._head.append(identity)
+        # A label measures its natural width as its whole text on one line,
+        # wrapped or not, so left to itself the column grows with the longest
+        # subtitle or label and pushes that row's timeline out of line. The
+        # clamp holds it to the column width; the labels wrap or ellipsize
+        # within it, and the row grows taller instead.
+        self._identity_clamp = Adw.Clamp(
+            child=identity,
+            maximum_size=self._wide_identity_clamp(),
+            tightening_threshold=self._wide_identity_clamp(),
+        )
+        self._head.append(self._identity_clamp)
 
         # 3. time block
         time_block = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
@@ -234,6 +255,11 @@ class TimezoneRow(Gtk.Box):
         self._warning.set_visible(False)
         self.append(self._warning)
 
+    def _wide_identity_clamp(self) -> int:
+        # The clamp measures its child with margins, the size request without.
+        identity = self._identity
+        return _IDENTITY_WIDTH + identity.get_margin_start() + identity.get_margin_end()
+
     # -- Adaptive layout ------------------------------------------------------
 
     def set_narrow(self, narrow: bool) -> None:
@@ -260,6 +286,8 @@ class TimezoneRow(Gtk.Box):
             # the name simply takes what is left after the time.
             self._identity.set_size_request(-1, -1)
             self._identity.set_hexpand(True)
+            self._identity_clamp.set_maximum_size(GLib.MAXINT32)
+            self._identity_clamp.set_tightening_threshold(GLib.MAXINT32)
             self._time_block.set_hexpand(False)
             self._head.set_margin_bottom(2)
         else:
@@ -269,8 +297,10 @@ class TimezoneRow(Gtk.Box):
             self._card.insert_child_after(self._divider, self._head)
             self._card.append(self._end_box)
             self._card.remove_css_class("narrow")
-            self._identity.set_size_request(180, -1)
+            self._identity.set_size_request(_IDENTITY_WIDTH, -1)
             self._identity.set_hexpand(False)
+            self._identity_clamp.set_maximum_size(self._wide_identity_clamp())
+            self._identity_clamp.set_tightening_threshold(self._wide_identity_clamp())
             self._head.set_margin_bottom(0)
 
     def set_move_enabled(self, up: bool, down: bool) -> None:
