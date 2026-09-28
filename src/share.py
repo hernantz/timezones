@@ -51,6 +51,16 @@ def _columns(text: str) -> int:
     return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
 
 
+def _clock(local: datetime, fmt_24h: bool) -> str:
+    """The reading, with "EDT"/"EST" added only when the zone lives through it
+    twice that night. Pasted text has no fold, so the tag is the only thing
+    telling a reader which 1:30 AM was picked; every other hour stays bare."""
+    text = format_clock(local, fmt_24h)
+    if tzinfo.is_repeated(local):
+        text += f" {tzinfo.pass_tag(local)}"
+    return text
+
+
 def zone_lines(model: ClockModel, instant: datetime, fmt_24h: bool) -> list[str]:
     """One line per city, aligned on the time column.
 
@@ -70,7 +80,7 @@ def zone_lines(model: ClockModel, instant: datetime, fmt_24h: bool) -> list[str]
     for city, name in zip(model.cities, names):
         local = tzinfo.local_now(city.tz, instant)
         padding = " " * (width - _columns(name))
-        text = f"{name}{padding}  {format_clock(local, fmt_24h)}"
+        text = f"{name}{padding}  {_clock(local, fmt_24h)}"
         if local.date() != ref_date:
             text += f" ({format_day(local)})"
         lines.append(text)
@@ -140,7 +150,7 @@ def ics_text(model: ClockModel, instant: datetime, fmt_24h: bool) -> str:
         # Translators: the title of a saved calendar event, as in
         # "Meeting · 15:00 London".
         summary = _("Meeting · {time} {city}").format(
-            time=format_clock(local, fmt_24h), city=tzinfo.city_name(ref.tz)
+            time=_clock(local, fmt_24h), city=tzinfo.city_name(ref.tz)
         )
 
     lines = [
@@ -150,7 +160,7 @@ def ics_text(model: ClockModel, instant: datetime, fmt_24h: bool) -> str:
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
         "BEGIN:VEVENT",
-        f"UID:{uuid.uuid4()}@timezones.hernantz.com",
+        f"UID:{uuid.uuid4()}@hernantz.github.io",
         f"DTSTAMP:{stamp.strftime(fmt)}",
         f"DTSTART:{start.strftime(fmt)}",
         f"DTEND:{end.strftime(fmt)}",

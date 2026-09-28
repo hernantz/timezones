@@ -432,6 +432,25 @@ def describe_zone(abbr: str, offset: timedelta) -> str:
     return f"{abbr} · {utc}" if names_zone(abbr) else utc
 
 
+def is_repeated(local: datetime) -> bool:
+    """Whether this clock reading comes round twice in its zone — a fall-back hour.
+
+    `astimezone()` already sets `fold` to say which pass an instant is (0 the
+    first, 1 the repeat), but a bare "1:30 AM" printed from it loses that. The
+    reading is ambiguous exactly when the other pass has a different offset.
+    A reading taken from an instant never lands in a spring-forward gap, so
+    this cannot mistake one for a repeat.
+    """
+    return local.replace(fold=1 - local.fold).utcoffset() != local.utcoffset()
+
+
+def pass_tag(local: datetime) -> str:
+    """What tells the two passes of a repeated reading apart: "EDT" against
+    "EST", or the UTC offset for a zone tzdata has no letters for."""
+    abbr = local.tzname() or ""
+    return abbr if names_zone(abbr) else format_utc_offset(local.utcoffset() or timedelta())
+
+
 # ---- Daylight-saving transitions -------------------------------------------
 
 
