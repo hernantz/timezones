@@ -34,6 +34,10 @@ once. Park the cursor on a given time and every row reads that same instant to p
 - **Offset pills.** Each non-reference row shows how far ahead of or behind the
   reference it is — not just UTC, which is rarely the number you want.
 
+<p align="center">
+  <img src="data/screenshots/daylight-saving-warnings-light.png" width="720" alt="Daylight-saving warnings on New York and Los Angeles as their clocks move back">
+</p>
+
 ### Keyboard navigation
 
 The timeline is a single focusable control, the way a slider is: **Tab** to the
