@@ -22,6 +22,33 @@
     </ul>
   </description>
 
+  <screenshots>
+    <screenshot type="default">
+      <caption>An hour parked on the shared timeline</caption>
+      <image>https://raw.githubusercontent.com/hernantz/timezones/master/data/screenshots/main-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Four cities across a full day, with daylight shading</caption>
+      <image>https://raw.githubusercontent.com/hernantz/timezones/master/data/screenshots/fullscreen-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Searching the timezone list</caption>
+      <image>https://raw.githubusercontent.com/hernantz/timezones/master/data/screenshots/add-timezone-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The stacked layout at phone width</caption>
+      <image>https://raw.githubusercontent.com/hernantz/timezones/master/data/screenshots/mobile-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Appearance, time format and view options</caption>
+      <image>https://raw.githubusercontent.com/hernantz/timezones/master/data/screenshots/mobile-preferences-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The same list in the dark theme</caption>
+      <image>https://raw.githubusercontent.com/hernantz/timezones/master/data/screenshots/main-dark.png</image>
+    </screenshot>
+  </screenshots>
+
   <launchable type="desktop-id">io.github.hernantz.timezones.desktop</launchable>
 
   <url type="homepage">https://github.com/hernantz/timezones</url>
@@ -29,7 +56,7 @@
   <url type="vcs-browser">https://github.com/hernantz/timezones</url>
 
   <developer id="io.github.hernantz">
-    <name>Hernan Tz</name>
+    <name translate="no">Hernan Lozano</name>
   </developer>
 
   <!-- Nothing in the app falls under any OARS category. -->

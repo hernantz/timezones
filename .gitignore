@@ -37,3 +37,6 @@ Thumbs.db
 *.json
 *.tmp
 *.log
+
+# ...except the Flatpak manifest, which is named after the application id.
+!packaging/flatpak/*.json
