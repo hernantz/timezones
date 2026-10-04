@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: timezones\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-04 18:24-0300\n"
+"POT-Creation-Date: 2026-10-04 20:00-0300\n"
 "PO-Revision-Date: 2026-09-25 23:12-0300\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: Spanish\n"
@@ -112,11 +112,19 @@ msgstr "Buscar una ciudad o huso horario"
 msgid "Results"
 msgstr "Resultados"
 
-#: src/add_dialog.py:272
+#: src/add_dialog.py:233
+msgid "Search for a City"
+msgstr "Busca una ciudad"
+
+#: src/add_dialog.py:233
+msgid "Type a city, country, or timezone name."
+msgstr "Escribe el nombre de una ciudad, un país o un huso horario."
+
+#: src/add_dialog.py:239
 msgid "No Results"
 msgstr "Sin resultados"
 
-#: src/add_dialog.py:273
+#: src/add_dialog.py:239
 msgid "Try a different city, country, or timezone name."
 msgstr "Prueba con otra ciudad, país o nombre de huso horario."
 

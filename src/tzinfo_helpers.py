@@ -246,22 +246,52 @@ def deserialize_place(text: str) -> Place | None:
     return _gweather().Location.get_world().deserialize(variant)
 
 
-# Under 0.035° (~3.5 km) of the zone's own coordinates every GWeather city is
-# the zone's city under another spelling — Godthåb for Nuuk, Rangoon for
-# Yangon, Valletta, Doha. The nearest that are not (Taipa, Luqa) start at 0.041.
+# Under 0.035° (~3.5 km) of a zone's own coordinates, every GWeather city in
+# the same country is the zone's city under another spelling — Godthåb for
+# Nuuk, Rangoon for Yangon, Valletta, Doha. The nearest that are not (Taipa,
+# Luqa) start at 0.041. The country has to match because cities pair up across
+# borders too: El Paso and Ciudad Juárez, Windsor and Detroit.
 _SAME_CITY_DEGREES = 0.035
 
 
-def is_zone_city(tz_id: str, place: Place) -> bool:
-    """Whether `place` is the very city `tz_id` is named for."""
+@lru_cache(maxsize=None)
+def _zones_by_cell() -> dict[tuple[int, int], list[str]]:
+    """Zones bucketed by their coordinates on a grid of _SAME_CITY_DEGREES
+    cells, so a place is compared with the few zones around it, not all 418."""
+    cells: dict[tuple[int, int], list[str]] = {}
+    for tz_id, (latitude, longitude) in _tz_to_coords().items():
+        cell = (int(latitude // _SAME_CITY_DEGREES), int(longitude // _SAME_CITY_DEGREES))
+        cells.setdefault(cell, []).append(tz_id)
+    return cells
+
+
+def zone_city_of(tz_id: str, place: Place) -> str | None:
+    """The zone `place` is the named city of, if it is one, else None.
+
+    Not necessarily `tz_id`, the zone GWeather files the place under: GWeather
+    gives most of a country one zone, so Córdoba comes filed under
+    America/Argentina/Buenos_Aires though tzdata keeps a zone for it. The zone
+    returned is then tzdata's, the one the city's own clocks follow.
+    """
     if fold(place.get_english_name()) == fold(english_city_name(tz_id)):
-        return True
-    coords = _tz_to_coords().get(tz_id)
+        return tz_id
     latitude, longitude = place.get_coords()
-    return coords is not None and (
-        abs(latitude - coords[0]) < _SAME_CITY_DEGREES
-        and abs(longitude - coords[1]) < _SAME_CITY_DEGREES
-    )
+    country = place.get_country()
+    row = int(latitude // _SAME_CITY_DEGREES)
+    column = int(longitude // _SAME_CITY_DEGREES)
+    cells = _zones_by_cell()
+    coords, codes = _tz_to_coords(), _tz_to_code()
+    for cell_row in (row - 1, row, row + 1):
+        for cell_column in (column - 1, column, column + 1):
+            for zone in cells.get((cell_row, cell_column), ()):
+                zone_latitude, zone_longitude = coords[zone]
+                if (
+                    abs(latitude - zone_latitude) < _SAME_CITY_DEGREES
+                    and abs(longitude - zone_longitude) < _SAME_CITY_DEGREES
+                    and codes.get(zone) == country
+                ):
+                    return zone
+    return None
 
 
 def _state(place: Place):

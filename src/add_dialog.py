@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from operator import itemgetter
 
-from gi.repository import Adw, GObject, Gtk
+from gi.repository import Adw, GLib, GObject, Gtk
 
 from . import tzinfo_helpers as tzinfo
 from .i18n import _
@@ -228,18 +228,40 @@ class AddTimezoneDialog(Adw.Dialog):
         self._stack = Gtk.Stack()
         self._stack.set_vexpand(True)
         self._stack.add_named(self._scroller, "results")
-        self._stack.add_named(self._build_empty_state(), "empty")
+        self._stack.add_named(
+            self._build_status(
+                _("Search for a City"), _("Type a city, country, or timezone name.")
+            ),
+            "start",
+        )
+        self._stack.add_named(
+            self._build_status(
+                _("No Results"), _("Try a different city, country, or timezone name.")
+            ),
+            "empty",
+        )
         body.append(self._stack)
 
         toolbar_view.set_content(body)
         self.set_child(toolbar_view)
 
-        self._index = self._build_index()
+        # Nothing is listed until there is a query, as in GNOME Clocks: a page
+        # of cities in alphabetical order was never the one anybody wanted.
+        # The index is built once the dialog has drawn, at idle priority —
+        # below GTK's redraw — so it costs the user nothing they can see; a
+        # query typed before then builds it on the spot.
+        self._index: list[_Entry] | None = None
+        GLib.idle_add(self._ensure_index)
         # Grown on demand up to _MAX_RESULTS and never torn down: a query only
         # ever rebinds these, so typing costs label updates instead of hundreds
         # of fresh widgets per keystroke.
         self._rows: list[_ResultRow] = []
         self._populate("")
+
+    def _ensure_index(self) -> bool:
+        if self._index is None:
+            self._index = self._build_index()
+        return GLib.SOURCE_REMOVE
 
     @staticmethod
     def _build_index() -> list[_Entry]:
@@ -249,13 +271,14 @@ class AddTimezoneDialog(Adw.Dialog):
         zones = tzinfo.all_timezone_ids()
         abbrs = {tz_id: tzinfo.abbreviation(tz_id, at) for tz_id in zones}
         places = []
-        # A GWeather city that is its zone's own city is already listed, as the
-        # zone. Its spelling is kept searchable there: GWeather's Rangoon and
-        # Godthåb are tzdata's Yangon and Nuuk.
+        # A GWeather city that is some zone's own city is already listed, as
+        # that zone. Its spelling is kept searchable there: GWeather's Rangoon
+        # and Godthåb are tzdata's Yangon and Nuuk.
         other_names: dict[str, list[str]] = {}
         for tz_id, place in tzinfo.gweather_places():
-            if tzinfo.is_zone_city(tz_id, place):
-                other_names.setdefault(tz_id, []).append(place.get_english_name())
+            zone = tzinfo.zone_city_of(tz_id, place)
+            if zone is not None:
+                other_names.setdefault(zone, []).append(place.get_english_name())
             else:
                 places.append(_Entry.build_place(tz_id, place, abbrs[tz_id]))
         index = [
@@ -264,13 +287,14 @@ class AddTimezoneDialog(Adw.Dialog):
         ]
         return index + places
 
-    def _build_empty_state(self) -> Gtk.Widget:
+    @staticmethod
+    def _build_status(title: str, description: str) -> Gtk.Widget:
         status = Adw.StatusPage()
         status.add_css_class("tz-empty-state")
         status.add_css_class("compact")
         status.set_icon_name("system-search-symbolic")
-        status.set_title(_("No Results"))
-        status.set_description(_("Try a different city, country, or timezone name."))
+        status.set_title(title)
+        status.set_description(description)
         return status
 
     def _on_search_changed(self, entry: Gtk.SearchEntry) -> None:
@@ -278,11 +302,15 @@ class AddTimezoneDialog(Adw.Dialog):
 
     def _populate(self, query: str) -> None:
         q = tzinfo.fold(query)
+        if not q:
+            self._results_label.set_visible(False)
+            self._stack.set_visible_child_name("start")
+            return
+        self._ensure_index()
         matches = []
         for entry in self._index:
             if (
-                not q
-                or q in entry.city_lower
+                q in entry.city_lower
                 or q in entry.country_lower
                 or q in entry.abbr_lower
                 or q in entry.id_lower
