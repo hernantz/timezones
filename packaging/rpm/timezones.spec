@@ -33,9 +33,14 @@ Requires:       libadwaita >= 1.7
 # those two files being present, not merely on the compiled zones.
 Requires:       tzdata
 
-# Translated city and country names. Both are read as plain gettext catalogs,
-# so without them the app still works, only with the English names.
-Recommends:     gweather-locations
+# The cities beyond the one each zone is named for (Seattle, Houston), and their
+# translated names: the add dialog searches libgweather's location database,
+# the one GNOME Clocks uses, and saved rows store their city in its format.
+# Pulls in gweather-locations, whose catalog also translates the zone cities.
+Requires:       libgweather4 >= 4.0
+
+# Translated country names, read as a plain gettext catalog; without it the
+# app still works, only with the English names.
 Recommends:     iso-codes
 
 %description

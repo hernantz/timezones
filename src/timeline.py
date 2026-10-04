@@ -600,9 +600,9 @@ class TimelineStrip(Gtk.Overlay):
         reference_date = model.reference_midnight(at).date()
 
         day_flags = [
-            tzinfo.is_daylight(city.tz, model.column_instant(c, at)) for c in range(_COLUMNS)
+            tzinfo.is_daylight(city.tz, model.column_instant(c, at), city.place) for c in range(_COLUMNS)
         ]
-        prev_day = tzinfo.is_daylight(city.tz, model.column_instant(-1, at))
+        prev_day = tzinfo.is_daylight(city.tz, model.column_instant(-1, at), city.place)
 
         specs: list[_CellSpec] = []
         flags: list[tuple[int, str, bool]] = []

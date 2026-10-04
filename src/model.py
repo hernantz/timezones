@@ -18,6 +18,23 @@ class City:
     tz: str
     label: str = ""
     is_reference: bool = False
+    # The city the user picked, when it is not the one the zone is named for:
+    # Seattle, kept by America/Los_Angeles.
+    place: tzinfo.Place | None = None
+
+    @property
+    def name(self) -> str:
+        return tzinfo.place_name(self.place) if self.place else tzinfo.city_name(self.tz)
+
+    @property
+    def region(self) -> str:
+        return tzinfo.place_region(self.place) if self.place else tzinfo.country_name(self.tz)
+
+    @property
+    def key(self) -> tuple[str, tzinfo.Place | None]:
+        """What makes two rows the same city: Seattle and Los Angeles share a
+        zone and are still two rows."""
+        return (self.tz, self.place)
 
 
 class ClockModel:

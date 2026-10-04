@@ -33,7 +33,7 @@ def _row_name(city: City) -> str:
     place; the label is what it means to *this* user, which is worth keeping
     but not worth leading with.
     """
-    city_name = tzinfo.city_name(city.tz)
+    city_name = city.name
     if city.label and city.label.casefold() != city_name.casefold():
         # Translators: a city and the user's own label for it, as in
         # "Cairo (Family)".
@@ -150,7 +150,7 @@ def ics_text(model: ClockModel, instant: datetime, fmt_24h: bool) -> str:
         # Translators: the title of a saved calendar event, as in
         # "Meeting · 15:00 London".
         summary = _("Meeting · {time} {city}").format(
-            time=_clock(local, fmt_24h), city=tzinfo.city_name(ref.tz)
+            time=_clock(local, fmt_24h), city=ref.name
         )
 
     lines = [

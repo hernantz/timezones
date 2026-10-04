@@ -497,17 +497,17 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         timezone and moved rather than rebuilt; `TimezoneRow.update()` and
         `TimelineStrip.update()` are both written to be re-run on a live row.
         """
-        existing: dict[str, TimezoneRow] = {}
+        existing: dict[tuple, TimezoneRow] = {}
         child = self._list_box.get_first_child()
         while child is not None:
-            existing[child.city.tz] = child
+            existing[child.city.key] = child
             child = child.get_next_sibling()
 
         at = self._effective_at()
         n = len(self._model.cities)
         previous: TimezoneRow | None = None
         for i, city in enumerate(self._model.cities):
-            row = existing.pop(city.tz, None)
+            row = existing.pop(city.key, None)
             if row is None:
                 row = self._make_row(city)
                 self._list_box.append(row)
@@ -814,18 +814,22 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     # -- Header actions ------------------------------------------------------
 
     def _on_add_clicked(self, *_args) -> None:
-        existing = {c.tz for c in self._model.cities}
+        existing = {c.key for c in self._model.cities}
         dialog = AddTimezoneDialog(existing)
         dialog.connect("timezone-added", self._on_timezone_added)
         dialog.present(self)
 
-    def _on_timezone_added(self, _dialog: AddTimezoneDialog, tz_id: str) -> None:
-        if any(c.tz == tz_id for c in self._model.cities):
+    def _on_timezone_added(
+        self, _dialog: AddTimezoneDialog, tz_id: str, place: tzinfo.Place | None
+    ) -> None:
+        if any(c.key == (tz_id, place) for c in self._model.cities):
             return
         # The first zone added to an empty list has to carry the reference flag
         # itself: `ClockModel.reference` would fall back to it anyway, but the
         # row's styling and the saved file read the flag, not the fallback.
-        self._model.cities.append(City(tz=tz_id, is_reference=not self._model.cities))
+        self._model.cities.append(
+            City(tz=tz_id, is_reference=not self._model.cities, place=place)
+        )
         self._persist()
         self._rebuild_rows()
 
@@ -858,7 +862,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
     def _on_row_edit_label(self, row: TimezoneRow) -> None:
         dialog = Adw.AlertDialog(
             heading=_("Edit label"),
-            body=_("Set a label for {city}").format(city=tzinfo.city_name(row.city.tz)),
+            body=_("Set a label for {city}").format(city=row.city.name),
         )
         entry = Gtk.Entry()
         entry.set_text(row.city.label)
@@ -921,7 +925,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         # queue of toasts each waiting out its own timeout.
         count = len(self._removed)
         if count == 1:
-            title = _("Removed {city}").format(city=tzinfo.city_name(self._removed[0][1].tz))
+            title = _("Removed {city}").format(city=self._removed[0][1].name)
         else:
             title = ngettext(
                 "Removed {n} timezone", "Removed {n} timezones", count
@@ -947,15 +951,15 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
     def _on_undo_remove(self, _toast: Adw.Toast) -> None:
         cities = self._model.cities
-        present = {c.tz for c in cities}
+        present = {c.key for c in cities}
         # Reverse order, so each index means what it did when it was taken.
         # Clamped, since rows may have been moved in the meantime; skipped if
-        # the zone was added back by hand before undoing.
+        # the city was added back by hand before undoing.
         for index, city in reversed(self._removed):
-            if city.tz in present:
+            if city.key in present:
                 continue
             cities.insert(min(index, len(cities)), city)
-            present.add(city.tz)
+            present.add(city.key)
         if self._removed_reference is not None and self._removed_reference in cities:
             self._model.set_reference(self._removed_reference)
         self._removed = []
@@ -963,12 +967,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._persist()
         self._rebuild_rows()
 
-    def _on_row_reorder(self, _row: TimezoneRow, source_tz: str, target_tz: str) -> None:
-        cities = self._model.cities
-        try:
-            source = next(c for c in cities if c.tz == source_tz)
-            target = next(c for c in cities if c.tz == target_tz)
-        except StopIteration:
+    def _on_row_reorder(self, _row: TimezoneRow, source: City, target: City) -> None:
+        if source not in self._model.cities or target not in self._model.cities:
             return
         # Dropping onto a row trades the two places outright; every other row
         # keeps the slot it had.
@@ -1054,7 +1054,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
                 child = nxt
             n = len(self._model.cities)
             for i, city in enumerate(self._model.cities):
-                tz_row = Adw.ActionRow(title=tzinfo.city_name(city.tz), subtitle=city.tz)
+                tz_row = Adw.ActionRow(title=city.name, subtitle=city.tz)
                 up_btn = Gtk.Button.new_from_icon_name("go-up-symbolic")
                 up_btn.set_tooltip_text(_("Move up"))
                 up_btn.add_css_class("flat")

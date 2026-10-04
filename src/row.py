@@ -29,7 +29,7 @@ class TimezoneRow(Gtk.Box):
         "move-up": (GObject.SignalFlags.RUN_FIRST, None, ()),
         "move-down": (GObject.SignalFlags.RUN_FIRST, None, ()),
         "remove-row": (GObject.SignalFlags.RUN_FIRST, None, ()),
-        "reorder": (GObject.SignalFlags.RUN_FIRST, None, (str, str)),
+        "reorder": (GObject.SignalFlags.RUN_FIRST, None, (object, object)),
     }
 
     def __init__(self, city: City):
@@ -328,9 +328,9 @@ class TimezoneRow(Gtk.Box):
 
         transitions = model.row_transitions(city, at)
 
-        self._city_label.set_label(tzinfo.city_name(city.tz))
+        self._city_label.set_label(city.name)
         self._subtitle_label.set_label(
-            f"{tzinfo.country_name(city.tz)} · {self._zone_summary(city.tz, transitions, at)}"
+            f"{city.region} · {self._zone_summary(city.tz, transitions, at)}"
         )
         self._update_warning(city, transitions, fmt_24h)
 
@@ -386,7 +386,7 @@ class TimezoneRow(Gtk.Box):
             return
         # Always the city, never the row's own label: "Clocks in You move back
         # 1 hour" is not a sentence, and the rule belongs to the place anyway.
-        name = tzinfo.city_name(city.tz)
+        name = city.name
         self._warning_label.set_label(
             "\n".join(
                 tzinfo.describe_transition(name, transition, fmt_24h)
@@ -522,9 +522,12 @@ class TimezoneRow(Gtk.Box):
 
         def on_drop(target: Gtk.DropTarget, value: str, _x: float, _y: float) -> bool:
             clear_hint()
-            if not value or value == self.city.tz:
+            # The source row rather than the dropped zone ID, which no longer
+            # names a row on its own: Seattle and Los Angeles share one.
+            source = _drag_row
+            if not value or source is None or source is self:
                 return False
-            self.emit("reorder", value, self.city.tz)
+            self.emit("reorder", source.city, self.city)
             return True
 
         drop_target.connect("motion", on_motion)

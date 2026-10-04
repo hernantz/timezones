@@ -14,7 +14,8 @@ _MAX_RESULTS = 60  # rows shown for one query, and so the size the row pool tops
 
 @dataclass(frozen=True)
 class _Entry:
-    """One timezone as this dialog needs it for *matching*.
+    """One city as this dialog needs it for *matching*: a zone's own city, or a
+    GWeather `place` that keeps that zone's clocks.
 
     Built once per dialog rather than per query. `tzinfo.abbreviation()` opens a
     `ZoneInfo` and converts a datetime, and the filter called it — along with
@@ -28,6 +29,7 @@ class _Entry:
     """
 
     tz_id: str
+    place: tzinfo.Place | None
     city: str
     country: str
     abbr: str
@@ -36,33 +38,56 @@ class _Entry:
     abbr_lower: str
     id_lower: str
 
+    @property
+    def key(self) -> tuple[str, tzinfo.Place | None]:
+        return (self.tz_id, self.place)
+
     @classmethod
-    def build(cls, tz_id: str) -> _Entry:
+    def build(cls, tz_id: str, abbr: str, other_names: tuple[str, ...] = ()) -> _Entry:
         city = tzinfo.city_name(tz_id)
         country = tzinfo.country_name(tz_id)
-        abbr = tzinfo.abbreviation(tz_id)
         # The English names are searched too, joined on behind the translated
         # ones: they are what a zone is called in every other app, and a
-        # German typing "Munich" should still find München. The ranking below
-        # only looks at the start of the string, so the translation still
-        # decides what counts as a prefix match.
+        # German typing "Munich" should still find München, and rank it as the
+        # prefix match it is.
         english_city = tzinfo.english_city_name(tz_id)
         english_country = tzinfo.english_country_name(tz_id)
         return cls(
             tz_id=tz_id,
+            place=None,
             city=city,
             country=country,
             abbr=abbr,
-            city_lower=_searchable(city, english_city),
+            city_lower="\n".join(
+                [_searchable(city, english_city), *map(tzinfo.fold, other_names)]
+            ),
             country_lower=_searchable(country, english_country),
+            abbr_lower=abbr.lower(),
+            id_lower=tz_id.lower(),
+        )
+
+    @classmethod
+    def build_place(cls, tz_id: str, place: tzinfo.Place, abbr: str) -> _Entry:
+        city = tzinfo.place_name(place)
+        region = tzinfo.place_region(place)
+        return cls(
+            tz_id=tz_id,
+            place=place,
+            city=city,
+            country=region,
+            abbr=abbr,
+            city_lower=_searchable(city, place.get_english_name()),
+            country_lower=_searchable(region, tzinfo.place_english_region(place)),
             abbr_lower=abbr.lower(),
             id_lower=tz_id.lower(),
         )
 
 
 def _searchable(name: str, english: str) -> str:
-    folded = name.lower()
-    return folded if name == english else f"{folded}\n{english.lower()}"
+    # Accent-folded, like the query, so "sao paulo" finds São Paulo and "paris"
+    # reads París as the prefix match it is.
+    folded = tzinfo.fold(name)
+    return folded if name == english else f"{folded}\n{tzinfo.fold(english)}"
 
 
 class _ResultRow:
@@ -74,11 +99,12 @@ class _ResultRow:
     showing has to live somewhere it can be updated — `self.tz_id`.
     """
 
-    __slots__ = ("widget", "tz_id", "_dialog", "_name", "_subtitle", "_preview", "_btn", "_icon")
+    __slots__ = ("widget", "tz_id", "place", "_dialog", "_name", "_subtitle", "_preview", "_btn", "_icon")
 
     def __init__(self, dialog: AddTimezoneDialog) -> None:
         self._dialog = dialog
         self.tz_id = ""
+        self.place: tzinfo.Place | None = None
 
         self.widget = Gtk.ListBoxRow()
         self.widget.set_activatable(False)
@@ -119,6 +145,7 @@ class _ResultRow:
 
     def bind(self, entry: _Entry, at: datetime, added: bool) -> None:
         self.tz_id = entry.tz_id
+        self.place = entry.place
         # One conversion, both facts: tzinfo.utc_offset() resolves the offset by
         # doing this very astimezone, so asking it separately would repeat the
         # work. Same instant either way, so the two cannot disagree.
@@ -144,7 +171,7 @@ class _ResultRow:
             self._btn.remove_css_class("added")
 
     def _on_clicked(self, _btn: Gtk.Button) -> None:
-        self._dialog.add_timezone(self.tz_id)
+        self._dialog.add_timezone(self.tz_id, self.place)
         self._set_added(True)
 
 
@@ -152,10 +179,10 @@ class AddTimezoneDialog(Adw.Dialog):
     __gtype_name__ = "TimezonesAddDialog"
 
     __gsignals__ = {
-        "timezone-added": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
+        "timezone-added": (GObject.SignalFlags.RUN_FIRST, None, (str, object)),
     }
 
-    def __init__(self, existing: set[str]):
+    def __init__(self, existing: set[tuple[str, tzinfo.Place | None]]):
         super().__init__()
         self.set_title(_("Add Timezone"))
         self.set_content_width(420)
@@ -207,12 +234,35 @@ class AddTimezoneDialog(Adw.Dialog):
         toolbar_view.set_content(body)
         self.set_child(toolbar_view)
 
-        self._index = [_Entry.build(tz_id) for tz_id in tzinfo.all_timezone_ids()]
+        self._index = self._build_index()
         # Grown on demand up to _MAX_RESULTS and never torn down: a query only
         # ever rebinds these, so typing costs label updates instead of hundreds
         # of fresh widgets per keystroke.
         self._rows: list[_ResultRow] = []
         self._populate("")
+
+    @staticmethod
+    def _build_index() -> list[_Entry]:
+        # One abbreviation per zone, not per city: resolving it opens a ZoneInfo
+        # and converts a datetime, and ~4300 cities share ~270 zones.
+        at = datetime.now().astimezone()
+        zones = tzinfo.all_timezone_ids()
+        abbrs = {tz_id: tzinfo.abbreviation(tz_id, at) for tz_id in zones}
+        places = []
+        # A GWeather city that is its zone's own city is already listed, as the
+        # zone. Its spelling is kept searchable there: GWeather's Rangoon and
+        # Godthåb are tzdata's Yangon and Nuuk.
+        other_names: dict[str, list[str]] = {}
+        for tz_id, place in tzinfo.gweather_places():
+            if tzinfo.is_zone_city(tz_id, place):
+                other_names.setdefault(tz_id, []).append(place.get_english_name())
+            else:
+                places.append(_Entry.build_place(tz_id, place, abbrs[tz_id]))
+        index = [
+            _Entry.build(tz_id, abbrs[tz_id], tuple(other_names.get(tz_id, ())))
+            for tz_id in zones
+        ]
+        return index + places
 
     def _build_empty_state(self) -> Gtk.Widget:
         status = Adw.StatusPage()
@@ -227,7 +277,7 @@ class AddTimezoneDialog(Adw.Dialog):
         self._populate(entry.get_text().strip())
 
     def _populate(self, query: str) -> None:
-        q = query.lower()
+        q = tzinfo.fold(query)
         matches = []
         for entry in self._index:
             if (
@@ -237,22 +287,32 @@ class AddTimezoneDialog(Adw.Dialog):
                 or q in entry.abbr_lower
                 or q in entry.id_lower
             ):
-                rank = 0 if entry.city_lower.startswith(q) else (1 if q in entry.city_lower else 2)
-                matches.append((rank, entry.city_lower, entry))
+                if entry.city_lower.startswith(q) or f"\n{q}" in entry.city_lower:
+                    rank = 0
+                elif q in entry.city_lower:
+                    rank = 1
+                else:
+                    rank = 2
+                # A zone's own city ahead of a namesake: Paris, France before
+                # Paris, Texas.
+                # Sorted by the shown name alone, not the English joined on
+                # after it, or París would sort behind every plain Paris.
+                shown_name = entry.city_lower.partition("\n")[0]
+                matches.append((rank, shown_name, entry.place is not None, entry))
 
-        # Sorted on the key alone: two zones can share a city name (Tripoli,
-        # Santa Isabel), and _Entry has no ordering to fall back on.
-        matches.sort(key=itemgetter(0, 1))
+        # Sorted on the key alone: two cities can share a name (Tripoli,
+        # Portland), and _Entry has no ordering to fall back on.
+        matches.sort(key=itemgetter(0, 1, 2))
         shown = matches[:_MAX_RESULTS]
 
         at = datetime.now().astimezone()
-        for i, (_rank, _key, entry) in enumerate(shown):
+        for i, (*_key, entry) in enumerate(shown):
             if i == len(self._rows):
                 row = _ResultRow(self)
                 self._rows.append(row)
                 self._list.append(row.widget)
             row = self._rows[i]
-            row.bind(entry, at, entry.tz_id in self._existing)
+            row.bind(entry, at, entry.key in self._existing)
             row.widget.set_visible(True)
 
         for row in self._rows[len(shown):]:
@@ -266,7 +326,7 @@ class AddTimezoneDialog(Adw.Dialog):
         self._results_label.set_visible(bool(matches))
         self._stack.set_visible_child_name("results" if matches else "empty")
 
-    def add_timezone(self, tz_id: str) -> None:
+    def add_timezone(self, tz_id: str, place: tzinfo.Place | None) -> None:
         """Called by a row's add button; the row paints its own check."""
-        self.emit("timezone-added", tz_id)
-        self._existing.add(tz_id)
+        self.emit("timezone-added", tz_id, place)
+        self._existing.add((tz_id, place))

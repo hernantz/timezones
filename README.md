@@ -128,7 +128,7 @@ make install    # meson install -C builddir
 ### RPM
 
 `packaging/rpm/timezones.spec` builds against gtk4, libadwaita ≥ 1.7 and
-python3-gobject. `make release VERSION=x.y.z` rewrites the version there and in
+python3-gobject, and requires libgweather4 at runtime. `make release VERSION=x.y.z` rewrites the version there and in
 `src/VERSION`, which meson and `src/const.py` both read.
 
 ## Development
@@ -141,8 +141,9 @@ make run        # builds, compiles the schema, runs from the source tree
 source-tree run is not swallowed by an installed copy holding the same
 application id.
 
-Runtime requirements: Python 3.9+ (`zoneinfo` is stdlib), PyGObject, GTK 4 and
-libadwaita ≥ 1.7. No timezone package is bundled — the IANA database is read
+Runtime requirements: Python 3.9+ (`zoneinfo` is stdlib), PyGObject, GTK 4,
+libadwaita ≥ 1.7 and libgweather 4 with its GObject introspection data
+(`GWeather-4.0`), which supplies the city database the add dialog searches. No timezone package is bundled — the IANA database is read
 from disk, including `zone.tab` and `iso3166.tab` for each zone's coordinates
 and country.
 
@@ -164,7 +165,9 @@ Layout:
 The app's own strings are translated with gettext, one `po/<lang>.po` per
 language. City and country names are not in there: they come from the
 system's `gweather-locations` and `iso-codes` catalogs, so they are already
-translated wherever those packages are.
+translated wherever those packages are. Cities beyond the one each IANA zone is
+named for — Seattle, filed under `America/Los_Angeles` — come from libgweather,
+which translates them itself.
 
 **Updating an existing translation** after strings have changed in the code:
 

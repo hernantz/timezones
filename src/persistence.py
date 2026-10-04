@@ -3,13 +3,18 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio  # noqa: E402
 
+from . import tzinfo_helpers as tzinfo
 from .const import APP_ID
 from .model import City
+
+if TYPE_CHECKING:
+    from .tzinfo_helpers import Place
 
 XDG_CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
 DATA_DIR = XDG_CONFIG_HOME / "timezones"
@@ -41,6 +46,7 @@ def load_cities(default: list[City]) -> list[City]:
                         tz=str(entry["tz"]),
                         label=str(entry.get("label", "")),
                         is_reference=bool(entry.get("is_reference", False)),
+                        place=_load_place(entry.get("place")),
                     )
                 )
         # An empty list is a state the user can actually reach (removing every
@@ -51,10 +57,24 @@ def load_cities(default: list[City]) -> list[City]:
         return default
 
 
+def _load_place(raw) -> Place | None:
+    """A saved place, or None for a row named after its zone, or for one
+    GWeather no longer knows — which then shows the zone's own city rather
+    than vanishing."""
+    if not isinstance(raw, str) or not raw:
+        return None
+    return tzinfo.deserialize_place(raw)
+
+
 def save_cities(cities: list[City]) -> None:
-    payload = [
-        {"tz": c.tz, "label": c.label, "is_reference": c.is_reference} for c in cities
-    ]
+    payload = []
+    for c in cities:
+        entry = {"tz": c.tz, "label": c.label, "is_reference": c.is_reference}
+        if c.place is not None:
+            # GWeather's own serialization, the one GNOME Clocks and Weather
+            # store their locations in.
+            entry["place"] = tzinfo.serialize_place(c.place)
+        payload.append(entry)
     _atomic_write_json(CITIES_FILE, {"schema_version": 2, "cities": payload})
 
 

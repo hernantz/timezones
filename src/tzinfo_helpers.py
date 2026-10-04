@@ -8,9 +8,13 @@ from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from math import asin, atan2, cos, degrees, radians, sin
 from pathlib import Path
+from typing import TYPE_CHECKING
 from zoneinfo import TZPATH, ZoneInfo
 
 from .i18n import C_, _, catalog, format_clock, format_month_day, ngettext
+
+if TYPE_CHECKING:
+    from gi.repository.GWeather import Location as Place
 
 # Signed degrees and minutes, optionally seconds, as zone.tab writes a position:
 # +DDMM+DDDMM or +DDMMSS+DDDMMSS, latitude then longitude, no separator.
@@ -147,6 +151,163 @@ def all_timezone_ids() -> list[str]:
     return sorted(_tz_to_country())
 
 
+# ---- Cities beyond the one each zone is named for ---------------------------
+#
+# zone.tab names a single city per zone, so a city that keeps the same clocks
+# as a bigger neighbour — Seattle, Houston, Mumbai — is nowhere in it. GNOME
+# Clocks finds those through libgweather's location database: some 4300 cities,
+# filed under their country and, for the larger countries, their state, each
+# keeping the zone of the nearest entry above it that names one. The same
+# library serves them here, translated, and saves a picked city in the format
+# Clocks itself stores them in.
+
+
+@lru_cache(maxsize=None)
+def _gweather():
+    """The GWeather module, imported on first use rather than at startup: only
+    the add dialog and rows naming a city of their own need it. Cached, since
+    gi.require_version() rescans the typelib versions on every call."""
+    import gi
+
+    gi.require_version("GWeather", "4.0")
+    from gi.repository import GWeather
+
+    return GWeather
+
+
+@lru_cache(maxsize=None)
+def _zone_links() -> dict[str, str]:
+    """Backward-compatible zone names to the canonical ones they now link to.
+
+    GWeather still files Kyiv under Europe/Kiev and Nuuk under America/Godthab,
+    names zone.tab no longer uses. tzdata.zi is the compiled source of the zone
+    database and lists every link as "L target alias".
+    """
+    for root in TZPATH:
+        path = Path(root, "tzdata.zi")
+        if path.is_file():
+            links = {}
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.startswith("L "):
+                    _l, target, alias = line.split()
+                    links[alias] = target
+            return links
+    return {}
+
+
+@lru_cache(maxsize=None)
+def gweather_places() -> list[tuple[str, Place]]:
+    """Every city GWeather knows with the zone it keeps, as (tz_id, place).
+
+    Walked on first use — about 50 ms — which is when the add dialog opens, not
+    at startup. libgweather hands out one object per city for the life of the
+    process, so a place compares and hashes by identity, and a row's place is
+    the very object found here.
+    """
+    GWeather = _gweather()
+    links = _zone_links()
+    places: list[tuple[str, Place]] = []
+
+    def walk(location) -> None:
+        child = location.next_child(None)
+        while child is not None:
+            if child.get_level() == GWeather.LocationLevel.CITY:
+                zone = child.get_timezone_str() or ""
+                zone = links.get(zone, zone)
+                if is_known_timezone(zone) and child.has_coords():
+                    places.append((zone, child))
+            else:
+                walk(child)
+            child = location.next_child(child)
+
+    walk(GWeather.Location.get_world())
+    return places
+
+
+def place_tz(place: Place) -> str | None:
+    """The zone a saved place keeps, or None if it is not one the app offers."""
+    zone = place.get_timezone_str() or ""
+    zone = _zone_links().get(zone, zone)
+    return zone if is_known_timezone(zone) else None
+
+
+def serialize_place(place: Place) -> str:
+    return place.serialize().print_(True)
+
+
+def deserialize_place(text: str) -> Place | None:
+    """A place saved by serialize_place(), or None if GWeather no longer knows it."""
+    from gi.repository import GLib
+
+    try:
+        variant = GLib.Variant.parse(None, text, None, None)
+    except GLib.Error:
+        return None
+    return _gweather().Location.get_world().deserialize(variant)
+
+
+# Under 0.035° (~3.5 km) of the zone's own coordinates every GWeather city is
+# the zone's city under another spelling — Godthåb for Nuuk, Rangoon for
+# Yangon, Valletta, Doha. The nearest that are not (Taipa, Luqa) start at 0.041.
+_SAME_CITY_DEGREES = 0.035
+
+
+def is_zone_city(tz_id: str, place: Place) -> bool:
+    """Whether `place` is the very city `tz_id` is named for."""
+    if fold(place.get_english_name()) == fold(english_city_name(tz_id)):
+        return True
+    coords = _tz_to_coords().get(tz_id)
+    latitude, longitude = place.get_coords()
+    return coords is not None and (
+        abs(latitude - coords[0]) < _SAME_CITY_DEGREES
+        and abs(longitude - coords[1]) < _SAME_CITY_DEGREES
+    )
+
+
+def _state(place: Place):
+    """The state or province a city is filed under, if its country has them."""
+    parent = place.get_parent()
+    if parent is not None and parent.get_level() == _gweather().LocationLevel.ADM1:
+        return parent
+    return None
+
+
+def place_name(place: Place) -> str:
+    """The city's name in the user's language, as GWeather translates it."""
+    return place.get_name()
+
+
+@lru_cache(maxsize=None)
+def place_region(place: Place) -> str:
+    """Where the city is, translated: "Washington, United States" or "Algeria"."""
+    # The country by its ISO code, through the same lookup the zone rows use,
+    # so a city reads the same as the rows beside it: "Congo (Dem. Rep.)"
+    # rather than GWeather's "Congo, Democratic Republic of the".
+    code = place.get_country() or ""
+    country = _country_name(code, _country_names().get(code, place.get_country_name() or ""))
+    state = _state(place)
+    if state is None:
+        return country
+    return _state_in_country().format(state=state.get_name(), country=country)
+
+
+def place_english_region(place: Place) -> str:
+    """place_region() untranslated, for search to match the English too."""
+    country = _country_names().get(place.get_country() or "", "")
+    state = _state(place)
+    return f"{state.get_english_name()}, {country}" if state is not None else country
+
+
+@lru_cache(maxsize=None)
+def _state_in_country() -> str:
+    # Looked up once: C_() goes through gettext's module-level lookup, which
+    # searches for the catalog afresh on every call — most of the dialog's
+    # opening time, at one call per city.
+    # Translators: a state or province and the country it is in, as in
+    # "Washington, United States".
+    return C_("state in country", "{state}, {country}")
+
+
 def is_known_timezone(tz_id: str) -> bool:
     return tz_id in _tz_to_country()
 
@@ -167,7 +328,7 @@ def city_name(tz_id: str) -> str:
     the zone's own spelling, which is English.
     """
     english = english_city_name(tz_id)
-    contexts = _gweather_cities().get(_fold(english))
+    contexts = _gweather_cities().get(fold(english))
     if not contexts:
         return english
     # The catalog keys a city by where it is ("City in Russia", "City in
@@ -200,8 +361,12 @@ def country_name(tz_id: str) -> str:
     """
     if tz_id == "UTC":
         return C_("time standard", "Coordinated Universal Time")
-    english = english_country_name(tz_id)
-    entry = _iso_countries().get(_tz_to_code().get(tz_id, ""), {})
+    return _country_name(_tz_to_code().get(tz_id, ""), english_country_name(tz_id))
+
+
+def _country_name(code: str, english: str) -> str:
+    """The country with ISO 3166 `code` in the user's language, else `english`."""
+    entry = _iso_countries().get(code, {})
     iso, gweather = _iso_catalog(), _gweather_catalog()
     for translations, context, msgid in (
         (iso, None, entry.get("common_name")),
@@ -290,11 +455,11 @@ def _gweather_cities() -> dict[str, dict[str, str]]:
         context, _sep, msgid = key.rpartition("\x04")
         if context and not context.startswith(_CITY_CONTEXT):
             continue
-        cities.setdefault(_fold(msgid), {})[context[len(_CITY_CONTEXT):]] = text
+        cities.setdefault(fold(msgid), {})[context[len(_CITY_CONTEXT):]] = text
     return cities
 
 
-def _fold(name: str) -> str:
+def fold(name: str) -> str:
     """Case- and accent-insensitive form of a name, for matching only."""
     decomposed = unicodedata.normalize("NFKD", name)
     return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
@@ -373,9 +538,10 @@ def solar_elevation(latitude: float, longitude: float, at: datetime) -> float:
     )
 
 
-def is_daylight(tz_id: str, at: datetime) -> bool:
-    """Whether the sun stands above the horizon over `tz_id`'s city, then."""
-    coords = _tz_to_coords().get(tz_id)
+def is_daylight(tz_id: str, at: datetime, place: Place | None = None) -> bool:
+    """Whether the sun stands above the horizon over the row's city, then:
+    `place` where the row is one, else the city `tz_id` is named for."""
+    coords = tuple(place.get_coords()) if place else _tz_to_coords().get(tz_id)
     if coords is None:
         # UTC is the only zone the app offers that has no coordinates, being a
         # reference rather than a place. Nothing casts a shadow there, so fall
