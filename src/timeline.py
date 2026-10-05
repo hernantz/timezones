@@ -295,6 +295,11 @@ class _CellSpec:
     """
 
     hour_label: str
+    # ":45" in a row whose clock is off the reference's by a fraction of an
+    # hour, else "". The columns start on the reference's hours, so in
+    # Kathmandu the cell numbered 19 really begins at 19:45 — a bare "19" would
+    # put the now-line, the day break and every scrubbed time 45 minutes out.
+    minutes: str
     tone: str  # "day" | "night" | "neutral" | "dst"
     marker: str | None  # "sun" at a sunrise, "moon" at a sunset, else nothing
     cap_start: bool
@@ -332,8 +337,9 @@ class _Cell:
         self.base.set_valign(Gtk.Align.FILL)
         self.slot.set_child(self.base)
 
-        self.label = Gtk.Label(label=spec.hour_label)
+        self.label = Gtk.Label()
         self.label.add_css_class("tz-cell-label")
+        self.label.set_justify(Gtk.Justification.CENTER)
         self.label.set_halign(Gtk.Align.CENTER)
         self.label.set_valign(Gtk.Align.CENTER)
         # Reserved headroom so the hour number sits a little lower, leaving
@@ -346,6 +352,7 @@ class _Cell:
         # happily shrink until the hours were unreadable.
         self.slot.set_measure_overlay(self.label, True)
         self.label_shown = True
+        self._write_label()
 
         self.rule: Gtk.Widget | None = None
         self.marker: Gtk.Widget | None = None
@@ -360,8 +367,9 @@ class _Cell:
         if spec == old:
             return
 
-        if spec.hour_label != old.hour_label and self.label_shown:
-            self.label.set_label(spec.hour_label)
+        if (spec.hour_label, spec.minutes) != (old.hour_label, old.minutes):
+            self.spec = spec
+            self._write_label()
 
         if spec.tone != old.tone:
             for widget in (self.slot, self.base):
@@ -401,11 +409,29 @@ class _Cell:
         if shown == self.label_shown:
             return
         self.label_shown = shown
-        self.label.set_label(self.spec.hour_label if shown else "\u00b7")
         if shown:
             self.label.remove_css_class("dot")
         else:
             self.label.add_css_class("dot")
+        self._write_label()
+
+    def _write_label(self) -> None:
+        """The hour, with its minutes as a small line beneath when it has any.
+
+        Beneath rather than beside, so a ":45" costs the column no width — the
+        label sets the strip's minimum, and every row has to share one grid.
+        """
+        if not self.label_shown:
+            self.label.set_label("\u00b7")
+            self.label.remove_css_class("minutes")
+        elif self.spec.minutes:
+            self.label.set_markup(
+                f'{self.spec.hour_label}\n<span size="78%">{self.spec.minutes}</span>'
+            )
+            self.label.add_css_class("minutes")
+        else:
+            self.label.set_label(self.spec.hour_label)
+            self.label.remove_css_class("minutes")
 
     def _add_rule(self) -> None:
         # The dashed rule marks the seam itself: overlaid flush against the
@@ -642,9 +668,11 @@ class TimelineStrip(Gtk.Overlay):
             sunrise = is_day and not was_day
             sunset = (not is_day) and was_day
 
+            local = model.local_time_at_column(city, col, at)
             specs.append(
                 _CellSpec(
-                    hour_label=_hour_label(model.local_hour_at_column(city, col, at), fmt_24h),
+                    hour_label=_hour_label(local.hour, fmt_24h),
+                    minutes=f":{local.minute:02d}" if local.minute else "",
                     tone=tone,
                     marker="sun" if sunrise else ("moon" if sunset else None),
                     cap_start=boundary != 0 and col == boundary,

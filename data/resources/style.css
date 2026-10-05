@@ -195,6 +195,18 @@ headerbar.tz-headerbar .title {
   opacity: 0.55;
 }
 
+/* An hour with a ":45" line beneath it. The label is centered in its cell, so
+   the extra line would lift the hour off the row of numbers in every other
+   row; pushing it down by that line's height (9px, the minutes line at 78% of
+   the label's 9.5px) puts it back. The 18px on both sides keeps the minutes
+   clear of a sunrise/sunset marker (15px + its 2px margin, anchored to the
+   cell's bottom) — equal, so the hour stays centered where it was. Side by
+   side the cell is already that tall; stacked, the strip grows to fit. */
+.tz-cell-label.minutes {
+  margin-top: 27px;
+  margin-bottom: 18px;
+}
+
 /* Tone lives on the slot as well as on the painted background, because the
    hour label is a sibling of that background rather than a child of it —
    see TimelineStrip._make_cell for why. */

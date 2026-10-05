@@ -110,14 +110,15 @@ class ClockModel:
         base = self.reference_midnight(at).astimezone(timezone.utc)
         return base + timedelta(hours=column)
 
-    def local_hour_at_column(self, city: City, column: int, at: datetime | None = None) -> int:
-        """The hour on `city`'s clock face when column `column` begins.
+    def local_time_at_column(self, city: City, column: int, at: datetime | None = None) -> datetime:
+        """`city`'s clock reading when column `column` begins.
 
         Read off the real instant rather than shifted by a stored offset, so a
         row that changes offset mid-strip repeats an hour or skips one exactly
-        as its clocks do.
+        as its clocks do. The minutes matter too: a column starts on the
+        reference's hour, which in Kathmandu or Kolkata is :45 or :30 past one.
         """
-        return tzinfo.local_now(city.tz, self.column_instant(column, at)).hour
+        return tzinfo.local_now(city.tz, self.column_instant(column, at))
 
     def boundary_column(self, city: City, at: datetime | None = None) -> int:
         """The column where `city`'s date rolls over, or 0 if it does so at the
