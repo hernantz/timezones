@@ -1,23 +1,26 @@
-spec
-
 Name:           timezones
-Version:        0.1.0
+Version:        1.0.0
 Release:        1%{?dist}
 Summary:        World time clocks with native GTK4 UI
 License:        GPL-3.0-or-later
 URL:            https://github.com/hernantz/timezones
-Source0:        %{name}-%{version}.tar.gz
+# GitHub's tarball for the v<version> tag; it unpacks to timezones-<version>.
+Source0:        %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
 
-BuildRequires:  gcc
+# Pure Python: nothing is compiled, so one package serves every architecture.
+BuildArch:      noarch
+
 BuildRequires:  meson
 BuildRequires:  ninja-build
 BuildRequires:  python3
 BuildRequires:  python3-devel
-BuildRequires:  python3-pygobject
+BuildRequires:  python3-gobject
 BuildRequires:  libadwaita-devel >= 1.7
 BuildRequires:  gtk4-devel
+BuildRequires:  glib2-devel
 BuildRequires:  pkgconfig
 BuildRequires:  desktop-file-utils
+BuildRequires:  appstream
 BuildRequires:  gettext
 
 Requires:       python3
@@ -50,29 +53,32 @@ World time clocks with native GTK4 UI.
 %autosetup -n %{name}-%{version}
 
 %build
-%meson_configure \
-  -Dpython.bytecompile=true
-
+%meson
 %meson_build
 
 %install
 %meson_install
+# The sources live in /usr/share/timezones, outside site-packages, where the
+# automatic byte-compilation does not reach.
+%py_byte_compile %{python3} %{buildroot}%{_datadir}/%{name}/
 %find_lang %{name}
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/io.github.hernantz.timezones.desktop
+appstreamcli validate --no-net %{buildroot}%{_metainfodir}/io.github.hernantz.timezones.metainfo.xml
 
 %files -f %{name}.lang
-%license LICENSE*
-%doc README* 
+# meson installs the licence itself, under the application id.
+%license %{_datadir}/licenses/io.github.hernantz.timezones/
+%doc README*
 
 %{_bindir}/timezones
+%{_datadir}/%{name}/
 %{_datadir}/applications/io.github.hernantz.timezones.desktop
-%{_datadir}/metainfo/*
-
-%{python3_sitearch}/timezones/*
+%{_metainfodir}/io.github.hernantz.timezones.metainfo.xml
 %{_datadir}/glib-2.0/schemas/io.github.hernantz.timezones.gschema.xml
-
 %{_datadir}/icons/hicolor/scalable/apps/io.github.hernantz.timezones.svg
 
 %changelog
+* Tue Oct 06 2026 Hernan Lozano <hernantz@gmail.com> - 1.0.0-1
+- First release.

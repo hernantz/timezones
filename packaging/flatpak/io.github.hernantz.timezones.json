@@ -80,8 +80,10 @@
     }
   ],
   "finish-args": [
-    "--socket=x11",
-    "--socket=wayland"
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--share=ipc",
+    "--device=dri"
   ],
   "cleanup": [
     "/include",

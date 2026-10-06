@@ -40,3 +40,5 @@ Thumbs.db
 
 # ...except the Flatpak manifest, which is named after the application id.
 !packaging/flatpak/*.json
+# ...and the saved-file samples each schema version is tested against.
+!tests/data/*.json
