@@ -11,7 +11,7 @@ from .const import APP_ID, VERSION
 from .date_popover import DatePopover
 from .i18n import C_, N_, _, format_clock, format_day, format_day_year, ngettext
 from .model import City, ClockModel
-from .persistence import Settings, load_cities, save_cities
+from .persistence import LoadedCities, Settings, load_cities, save_cities
 from .preferences import PreferencesDialog
 from .row import TimezoneRow
 from .share import EVENT_MINUTES, clipboard_text, launch_ics, write_ics
@@ -112,8 +112,8 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
             City(tz=d.tz, label=_(d.label) if d.label else "", is_reference=d.is_reference)
             for d in _DEFAULT_CITIES
         ]
-        cities = load_cities(defaults)
-        self._model = ClockModel(cities)
+        loaded = load_cities(defaults)
+        self._model = ClockModel(loaded.cities)
 
         self._install_actions()
         self._build_ui()
@@ -125,6 +125,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
         self._rebuild_rows()
         GLib.timeout_add_seconds(_TICK_SECONDS, self._on_tick)
+        self._report_load_problem(loaded)
 
     # -- UI construction ----------------------------------------------------
 
@@ -803,6 +804,20 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
 
     def _persist(self) -> None:
         save_cities(self._model.cities)
+
+    def _report_load_problem(self, loaded: LoadedCities) -> None:
+        if loaded.newer:
+            message = _("These timezones were saved by a newer version; changes won't be saved")
+        elif loaded.broken_copy is not None:
+            message = _("Couldn't read the saved timezones; the file was kept as {name}").format(
+                name=loaded.broken_copy.name
+            )
+        else:
+            return
+        toast = Adw.Toast.new(message)
+        # Stays until dismissed: it explains why the list looks the way it does.
+        toast.set_timeout(0)
+        self._toasts.add_toast(toast)
 
     def _on_tick(self) -> bool:
         if self._grid_date != self._current_grid_date():

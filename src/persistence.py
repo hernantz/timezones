@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import gi
 gi.require_version("Gio", "2.0")
@@ -20,6 +22,23 @@ XDG_CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".con
 DATA_DIR = XDG_CONFIG_HOME / "timezones"
 CITIES_FILE = DATA_DIR / "cities.json"
 
+# Bumped only when older code would misread the file; a new optional field is
+# ignored by older code and needs no bump. Each bump adds a step to _MIGRATIONS.
+SCHEMA_VERSION = 1
+
+# Set when the file came from a newer version: saving with this version's
+# format would drop whatever that version added, so nothing is written.
+_save_blocked = False
+
+
+@dataclass
+class LoadedCities:
+    cities: list[City]
+    # Saved by a newer version of the app; changes this session are not saved.
+    newer: bool = False
+    # An unreadable file, moved here so the defaults never overwrite it.
+    broken_copy: Path | None = None
+
 
 def _atomic_write_json(path: Path, payload: dict) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -28,33 +47,84 @@ def _atomic_write_json(path: Path, payload: dict) -> None:
     tmp.replace(path)
 
 
-def load_cities(default: list[City]) -> list[City]:
-    if not CITIES_FILE.exists():
-        return default
+# version -> the step that turns it into version + 1; a file several versions
+# behind goes through each in turn. The first one will be {1: _v1_to_v2}.
+_MIGRATIONS: dict[int, Callable[[dict], dict]] = {}
+
+
+def _migrate(data: dict, version: int) -> dict:
+    while version < SCHEMA_VERSION:
+        data = _MIGRATIONS[version](data)
+        version += 1
+    return data
+
+
+def _move_aside(path: Path) -> Path | None:
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    target = path.with_name(f"{path.name}.broken-{stamp}")
     try:
-        data = json.loads(CITIES_FILE.read_text(encoding="utf-8"))
-        raw = data.get("cities")
-        if not isinstance(raw, list):
-            return default
-        cities: list[City] = []
-        for entry in raw:
-            if isinstance(entry, str):
-                cities.append(City(tz=entry))
-            elif isinstance(entry, dict) and entry.get("tz"):
-                cities.append(
-                    City(
-                        tz=str(entry["tz"]),
-                        label=str(entry.get("label", "")),
-                        is_reference=bool(entry.get("is_reference", False)),
-                        place=_load_place(entry.get("place")),
-                    )
-                )
-        # An empty list is a state the user can actually reach (removing every
-        # timezone), so it has to survive a restart — only a missing or
-        # unreadable file falls back to the defaults.
-        return cities
+        path.replace(target)
+    except OSError:
+        return None
+    return target
+
+
+def load_cities(default: list[City]) -> LoadedCities:
+    global _save_blocked
+    try:
+        text = CITIES_FILE.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return LoadedCities(default)
+    except OSError:
+        # There, but not readable: saving would replace what could not be read.
+        _save_blocked = True
+        return LoadedCities(default)
+
+    try:
+        data = json.loads(text)
+        version = data.get("schema_version", 1)
+        if not isinstance(version, int) or version < 1:
+            raise ValueError(f"bad schema_version {version!r}")
+        newer = version > SCHEMA_VERSION
+        if version < SCHEMA_VERSION:
+            # Kept until the user removes it, in case a migration step is wrong.
+            backup = CITIES_FILE.with_name(f"cities.v{version}.json.bak")
+            if not backup.exists():
+                try:
+                    backup.write_text(text, encoding="utf-8")
+                except OSError:
+                    pass
+            data = _migrate(data, version)
+        cities = _parse_cities(data)
     except Exception:
-        return default
+        return LoadedCities(default, broken_copy=_move_aside(CITIES_FILE))
+
+    if newer:
+        # Read as well as this version can (unknown fields are ignored), but
+        # left untouched on disk.
+        _save_blocked = True
+    # An empty list is a state the user can actually reach (removing every
+    # timezone), so it has to survive a restart — only a missing or
+    # unreadable file falls back to the defaults.
+    return LoadedCities(cities, newer=newer)
+
+
+def _parse_cities(data: dict) -> list[City]:
+    raw = data.get("cities")
+    if not isinstance(raw, list):
+        raise ValueError("no cities list")
+    cities: list[City] = []
+    for entry in raw:
+        if isinstance(entry, dict) and entry.get("tz"):
+            cities.append(
+                City(
+                    tz=str(entry["tz"]),
+                    label=str(entry.get("label", "")),
+                    is_reference=bool(entry.get("is_reference", False)),
+                    place=_load_place(entry.get("place")),
+                )
+            )
+    return cities
 
 
 def _load_place(raw) -> Place | None:
@@ -67,6 +137,8 @@ def _load_place(raw) -> Place | None:
 
 
 def save_cities(cities: list[City]) -> None:
+    if _save_blocked:
+        return
     payload = []
     for c in cities:
         entry = {"tz": c.tz, "label": c.label, "is_reference": c.is_reference}
@@ -75,7 +147,7 @@ def save_cities(cities: list[City]) -> None:
             # store their locations in.
             entry["place"] = tzinfo.serialize_place(c.place)
         payload.append(entry)
-    _atomic_write_json(CITIES_FILE, {"schema_version": 2, "cities": payload})
+    _atomic_write_json(CITIES_FILE, {"schema_version": SCHEMA_VERSION, "cities": payload})
 
 
 class Settings:

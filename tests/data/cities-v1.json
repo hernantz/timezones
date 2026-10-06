@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "cities": [
+    {"tz": "America/Argentina/Buenos_Aires", "label": "", "is_reference": true},
+    {"tz": "Europe/Madrid", "label": "Office", "is_reference": false}
+  ]
+}
