@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from operator import itemgetter
 
-from gi.repository import Adw, GLib, GObject, Gtk
+from gi.repository import Adw, GLib, GObject, Gtk, Pango
 
 from . import tzinfo_helpers as tzinfo
 from .i18n import _
@@ -118,9 +118,11 @@ class _ResultRow:
         text_box.set_hexpand(True)
         self._name = Gtk.Label(xalign=0)
         self._name.set_halign(Gtk.Align.START)
+        self._name.set_ellipsize(Pango.EllipsizeMode.END)
         self._name.add_css_class("heading")
         self._subtitle = Gtk.Label(xalign=0)
         self._subtitle.set_halign(Gtk.Align.START)
+        self._subtitle.set_ellipsize(Pango.EllipsizeMode.END)
         self._subtitle.add_css_class("dim-label")
         self._subtitle.add_css_class("caption")
         text_box.append(self._name)
@@ -220,6 +222,10 @@ class AddTimezoneDialog(Adw.Dialog):
 
         self._scroller = Gtk.ScrolledWindow()
         self._scroller.set_vexpand(True)
+        # Rows must fit the dialog's width: with horizontal scrolling allowed,
+        # one long subtitle widens the whole list and clips the time and the
+        # add button off the right edge. The labels ellipsize instead.
+        self._scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self._list = Gtk.ListBox()
         self._list.set_selection_mode(Gtk.SelectionMode.NONE)
         self._list.add_css_class("boxed-list")
