@@ -36,7 +36,7 @@ class LoadedCities:
     cities: list[City]
     # Saved by a newer version of the app; changes this session are not saved.
     newer: bool = False
-    # An unreadable file, moved here so the defaults never overwrite it.
+    # An unreadable file, moved here so the empty list never overwrites it.
     broken_copy: Path | None = None
 
 
@@ -69,16 +69,16 @@ def _move_aside(path: Path) -> Path | None:
     return target
 
 
-def load_cities(default: list[City]) -> LoadedCities:
+def load_cities() -> LoadedCities:
     global _save_blocked
     try:
         text = CITIES_FILE.read_text(encoding="utf-8")
     except FileNotFoundError:
-        return LoadedCities(default)
+        return LoadedCities([])
     except OSError:
         # There, but not readable: saving would replace what could not be read.
         _save_blocked = True
-        return LoadedCities(default)
+        return LoadedCities([])
 
     try:
         data = json.loads(text)
@@ -97,15 +97,12 @@ def load_cities(default: list[City]) -> LoadedCities:
             data = _migrate(data, version)
         cities = _parse_cities(data)
     except Exception:
-        return LoadedCities(default, broken_copy=_move_aside(CITIES_FILE))
+        return LoadedCities([], broken_copy=_move_aside(CITIES_FILE))
 
     if newer:
         # Read as well as this version can (unknown fields are ignored), but
         # left untouched on disk.
         _save_blocked = True
-    # An empty list is a state the user can actually reach (removing every
-    # timezone), so it has to survive a restart — only a missing or
-    # unreadable file falls back to the defaults.
     return LoadedCities(cities, newer=newer)
 
 

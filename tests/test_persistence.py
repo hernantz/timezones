@@ -12,7 +12,6 @@ from src import persistence
 from src.model import City
 
 DATA = Path(__file__).parent / "data"
-DEFAULTS = [City(tz="UTC")]
 
 
 class PersistenceTest(unittest.TestCase):
@@ -35,15 +34,15 @@ class PersistenceTest(unittest.TestCase):
     def write(self, payload) -> None:
         self.file.write_text(json.dumps(payload), encoding="utf-8")
 
-    def test_missing_file_gives_defaults(self) -> None:
-        loaded = persistence.load_cities(DEFAULTS)
-        self.assertEqual(loaded.cities, DEFAULTS)
+    def test_missing_file_gives_empty_list(self) -> None:
+        loaded = persistence.load_cities()
+        self.assertEqual(loaded.cities, [])
         self.assertFalse(loaded.newer)
         self.assertIsNone(loaded.broken_copy)
 
     def test_v1_loads(self) -> None:
         self.use("cities-v1.json")
-        loaded = persistence.load_cities(DEFAULTS)
+        loaded = persistence.load_cities()
         self.assertEqual(
             loaded.cities,
             [
@@ -64,7 +63,7 @@ class PersistenceTest(unittest.TestCase):
         with mock.patch.object(persistence, "SCHEMA_VERSION", 2), \
                 mock.patch.dict(persistence._MIGRATIONS, {1: v1_to_v2}), \
                 mock.patch.object(persistence, "_parse_cities", side_effect=lambda d: d["cities"]):
-            rows = persistence.load_cities(DEFAULTS).cities
+            rows = persistence.load_cities().cities
         self.assertEqual([row["name"] for row in rows], ["", "Office"])
 
         backup = self.dir / "cities.v1.json.bak"
@@ -72,7 +71,7 @@ class PersistenceTest(unittest.TestCase):
 
     def test_empty_list_survives(self) -> None:
         self.write({"schema_version": 1, "cities": []})
-        self.assertEqual(persistence.load_cities(DEFAULTS).cities, [])
+        self.assertEqual(persistence.load_cities().cities, [])
 
     def test_newer_version_is_read_but_never_written(self) -> None:
         payload = {
@@ -82,7 +81,7 @@ class PersistenceTest(unittest.TestCase):
         self.write(payload)
         before = self.file.read_text()
 
-        loaded = persistence.load_cities(DEFAULTS)
+        loaded = persistence.load_cities()
         self.assertTrue(loaded.newer)
         self.assertEqual([c.tz for c in loaded.cities], ["Asia/Tokyo"])
 
@@ -93,13 +92,13 @@ class PersistenceTest(unittest.TestCase):
         for content in ["{not json", "[]", '{"schema_version": 1}', '{"schema_version": "x", "cities": []}']:
             with self.subTest(content=content):
                 self.file.write_text(content, encoding="utf-8")
-                loaded = persistence.load_cities(DEFAULTS)
-                self.assertEqual(loaded.cities, DEFAULTS)
+                loaded = persistence.load_cities()
+                self.assertEqual(loaded.cities, [])
                 self.assertIsNotNone(loaded.broken_copy)
                 self.assertEqual(loaded.broken_copy.read_text(), content)
                 self.assertFalse(self.file.exists())
 
-                # The defaults can now be saved without losing the broken file.
+                # An empty list can now be saved without losing the broken file.
                 persistence.save_cities(loaded.cities)
                 self.assertEqual(loaded.broken_copy.read_text(), content)
                 loaded.broken_copy.unlink()

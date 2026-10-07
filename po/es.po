@@ -174,18 +174,6 @@ msgctxt "strftime format"
 msgid "%a %-d"
 msgstr "%a %-d"
 
-#: src/main_window.py:26
-msgid "You"
-msgstr "Tú"
-
-#: src/main_window.py:27
-msgid "Family"
-msgstr "Familia"
-
-#: src/main_window.py:28
-msgid "Team"
-msgstr "Equipo"
-
 #: src/main_window.py:152
 msgid "Jump to Date"
 msgstr "Ir a una fecha"

@@ -9,7 +9,7 @@ from . import tzinfo_helpers as tzinfo
 from .add_dialog import AddTimezoneDialog
 from .const import APP_ID, VERSION
 from .date_popover import DatePopover
-from .i18n import C_, N_, _, format_clock, format_day, format_day_year, ngettext
+from .i18n import C_, _, format_clock, format_day, format_day_year, ngettext
 from .model import City, ClockModel
 from .persistence import LoadedCities, Settings, load_cities, save_cities
 from .preferences import PreferencesDialog
@@ -19,15 +19,6 @@ from .timeline import TimelineStrip
 
 _SCRUB_STEP = 0.25  # 15 minutes, matches _snap_column()
 _MAX_COLUMN = 24.0 - _SCRUB_STEP  # 23:45 — last snappable slot still inside the day
-
-# Labels are marked here and translated when the defaults are copied: from
-# then on they are the user's own text, saved as whatever language they were in.
-_DEFAULT_CITIES = [
-    City(tz="Europe/London", label=N_("You"), is_reference=True),
-    City(tz="Africa/Cairo", label=N_("Family")),
-    City(tz="Europe/Moscow", label=N_("Team")),
-    City(tz="Pacific/Auckland"),
-]
 
 _TICK_SECONDS = 15
 
@@ -108,11 +99,7 @@ class TimezonesMainWindow(Adw.ApplicationWindow):
         self._removed_reference: City | None = None
         self._removed_toast: Adw.Toast | None = None
 
-        defaults = [
-            City(tz=d.tz, label=_(d.label) if d.label else "", is_reference=d.is_reference)
-            for d in _DEFAULT_CITIES
-        ]
-        loaded = load_cities(defaults)
+        loaded = load_cities()
         self._model = ClockModel(loaded.cities)
 
         self._install_actions()
