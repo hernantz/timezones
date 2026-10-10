@@ -111,12 +111,30 @@ header drops the 12/24h toggle (it stays in Preferences):
 
 ### Flatpak
 
+From the app's own Flatpak repository, which keeps it updated through
+`flatpak update` and GNOME Software:
+
 ```sh
-flatpak-builder --user --install --force-clean build-flatpak packaging/flatpak/io.github.hernantz.timezones.json
-flatpak run io.github.hernantz.timezones
+flatpak install --user https://hernantz.github.io/timezones/io.github.hernantz.timezones.flatpakref
 ```
 
-Needs the `org.gnome.Platform` and `org.gnome.Sdk` runtimes, version 51.
+Or download `timezones-<version>.flatpak` from the
+[releases page](https://github.com/hernantz/timezones/releases) and open it;
+it installs from the same repository, so it updates the same way. Either way
+the GNOME runtime comes from Flathub, which is added if missing.
+
+### Fedora (COPR)
+
+```sh
+sudo dnf copr enable hernantz/timezones
+sudo dnf install timezones
+```
+
+Fedora 43 or newer.
+
+### Arch Linux (AUR)
+
+`timezones` in the AUR, e.g. `yay -S timezones`.
 
 ### From source
 
@@ -125,11 +143,13 @@ make setup      # meson setup builddir
 make install    # meson install -C builddir
 ```
 
-### RPM
+To build the Flatpak from the source tree instead (needs the
+`org.gnome.Platform` and `org.gnome.Sdk` runtimes, version 51):
 
-`packaging/rpm/timezones.spec` builds against gtk4, libadwaita ≥ 1.7 and
-python3-gobject, and requires libgweather4 at runtime. `make release VERSION=x.y.z` rewrites the version there and in
-`src/VERSION`, which meson and `src/const.py` both read.
+```sh
+flatpak-builder --user --install --force-clean build-flatpak packaging/flatpak/io.github.hernantz.timezones.json
+flatpak run io.github.hernantz.timezones
+```
 
 ## Development
 
@@ -213,6 +233,41 @@ Things to know while translating:
 **Adding a translatable string** in code: wrap it in `_()` (or `C_()`,
 `ngettext()`, `N_()` — see `src/i18n.py`), add the file to `po/POTFILES.in` if it
 is not listed yet, and run `make pot`.
+
+## Releasing
+
+`src/VERSION` is the version; meson and `src/const.py` read it, and the rpm
+spec, the PKGBUILD and the metainfo `<releases>` are kept in step by
+`make release`.
+
+```sh
+make release VERSION=1.2.0   # bumps the version, adds a metainfo <release> and changelog entries
+# write the notes: replace "TODO: release notes" in data/appdata/*.metainfo.xml
+make pot                     # the notes are translatable; translate them in po/<lang>.po
+make tag                     # commits the release files and tags v1.2.0
+git push --follow-tags
+```
+
+`make tag` refuses while the notes are still the placeholder or anything outside
+the release files is uncommitted. Pushing the tag runs
+`.github/workflows/release.yml`, which:
+
+- builds the Flatpak, signs it and publishes the repository on GitHub Pages
+  (`make flatpak-repo`), so existing installs update;
+- creates the GitHub Release, with the metainfo notes, the `.flatpak` bundle
+  (`make bundle`) and the prebuilt tree FlatPark repackages
+  (`make flatpark-payload`);
+- pushes the PKGBUILD to the AUR with the tag tarball's checksum.
+
+[Packit](https://packit.dev) (`.packit.yaml`) builds the rpm in the
+`hernantz/timezones` COPR when the Release appears. FlatPark notices the new
+Release by itself through `packaging/flatpark/resolve-update.sh` and opens its
+own update PR. The make targets the workflow runs work locally too.
+
+The [FlatPark](https://flatpark.org) listing is a folder in the
+`flatpark/flatpark` repository: `make flatpark-registry` assembles it, pinned to
+the current release's published tree, from the templates in
+`packaging/flatpark/`.
 
 ## License
 

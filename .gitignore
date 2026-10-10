@@ -42,3 +42,9 @@ Thumbs.db
 !packaging/flatpak/*.json
 # ...and the saved-file samples each schema version is tested against.
 !tests/data/*.json
+
+# Release outputs: the Pages site with the Flatpak repository, and bundles.
+build-site/
+build-flatpark/
+*.flatpak
+timezones-*-flatpark-*.tar.xz

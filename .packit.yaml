@@ -1,0 +1,19 @@
+# Packit builds the rpm in COPR (hernantz/timezones) whenever a GitHub Release
+# is published; the release workflow creates that Release from the tag.
+specfile_path: packaging/rpm/timezones.spec
+upstream_package_name: timezones
+downstream_package_name: timezones
+upstream_tag_template: v{version}
+
+jobs:
+  - job: copr_build
+    trigger: release
+    owner: hernantz
+    project: timezones
+    targets:
+      - fedora-43-x86_64
+      - fedora-43-aarch64
+      - fedora-44-x86_64
+      - fedora-44-aarch64
+      - fedora-45-x86_64
+      - fedora-45-aarch64

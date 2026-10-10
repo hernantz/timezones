@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timezones</title>
+<style>
+  :root { color-scheme: light dark; --fg: #1e1e1e; --bg: #fafafa; --code: #ebebeb; --link: #1c71d8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg: #f0f0f0; --bg: #242424; --code: #363636; --link: #78aeed; }
+  }
+  body { font: 16px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg);
+         max-width: 40rem; margin: 3rem auto; padding: 0 16px; }
+  a { color: var(--link); }
+  pre { background: var(--code); padding: .75rem 1rem; border-radius: 8px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1>Timezones</h1>
+<p>World clocks for GNOME: one row per city on a shared timeline.</p>
+
+<h2>Install with Flatpak</h2>
+<p>Open <a href="@APP_ID@.flatpakref">@APP_ID@.flatpakref</a> with GNOME Software, or run:</p>
+<pre>flatpak install --user @URL@/@APP_ID@.flatpakref</pre>
+<p>Updates then arrive through <code>flatpak update</code> and GNOME Software.
+The GNOME runtime comes from Flathub, which is added automatically if missing.</p>
+
+<h2>Other ways to install</h2>
+<ul>
+  <li>Fedora: <code>sudo dnf copr enable hernantz/timezones &amp;&amp; sudo dnf install timezones</code></li>
+  <li>Arch Linux: <code>timezones</code> from the AUR</li>
+  <li>A <code>.flatpak</code> file on the <a href="https://github.com/hernantz/timezones/releases">releases page</a></li>
+</ul>
+
+<p><a href="https://github.com/hernantz/timezones">Source code and issues</a></p>
+</body>
+</html>

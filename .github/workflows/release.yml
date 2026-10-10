@@ -1,0 +1,163 @@
+# Runs on a pushed release tag (`make tag && git push --follow-tags`):
+#   - builds and signs the Flatpak, publishes the repository on GitHub Pages
+#   - creates the GitHub Release, with the .flatpak bundle, the prebuilt tree
+#     FlatPark repackages, and the metainfo notes
+#   - pushes the PKGBUILD to the AUR
+# COPR is not here: Packit (.packit.yaml) builds it when the Release appears.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# Two tags pushed close together must not deploy Pages out of order.
+concurrency: release
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: |
+          v=$(cat src/VERSION)
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match src/VERSION ($v)"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  flatpak:
+    needs: check
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      # What the make targets use beyond flatpak-builder; already-present ones are skipped.
+      - run: dnf -y install make gnupg2 jq xz tar
+      - uses: actions/cache@v4
+        with:
+          path: .flatpak-builder
+          key: flatpak-builder-${{ hashFiles('packaging/flatpak/*.json') }}
+      - name: Import the repository signing key
+        env:
+          KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::the FLATPAK_GPG_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          echo "$KEY" | gpg --batch --import
+          fpr=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')
+          echo "GPG_KEY=$fpr" >> "$GITHUB_ENV"
+      - run: make flatpak-repo bundle GPG_KEY="$GPG_KEY"
+      # The prebuilt tree FlatPark repackages; its resolver finds it on the Release.
+      - run: make flatpark-payload
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build-site
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle
+          path: |
+            timezones-*.flatpak
+            timezones-*-flatpark-*.tar.xz
+
+  pages:
+    needs: flatpak
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  github-release:
+    needs: [check, flatpak]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: bundle
+      - name: Release notes from the metainfo
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          python3 - <<'EOF' > notes.md
+          import os
+          import xml.etree.ElementTree as ET
+          root = ET.parse("data/appdata/io.github.hernantz.timezones.metainfo.xml").getroot()
+          release = root.find(f"releases/release[@version='{os.environ['VERSION']}']")
+          for el in release.find("description"):
+              if el.tag == "p":
+                  print(" ".join(el.text.split()), end="\n\n")
+              else:
+                  for li in el.iter("li"):
+                      print("- " + " ".join(li.text.split()))
+                  print()
+          EOF
+          cat notes.md
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" timezones-*.flatpak timezones-*-flatpark-*.tar.xz \
+            --title "Timezones $VERSION" --notes-file notes.md
+
+  aur:
+    needs: check
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - run: pacman -Syu --noconfirm --needed git openssh
+      - uses: actions/checkout@v4
+      - name: Push the PKGBUILD to the AUR
+        env:
+          AUR_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          if [ -z "$AUR_KEY" ]; then
+            echo "::notice::AUR_SSH_PRIVATE_KEY is not set; skipping the AUR"
+            exit 0
+          fi
+          sum=$(curl -fsSL "https://github.com/hernantz/timezones/archive/v$VERSION.tar.gz" | sha256sum | cut -d' ' -f1)
+          mkdir pkg && cp packaging/arch/PKGBUILD pkg/
+          sed -i -e "s/^pkgver=.*/pkgver=$VERSION/" -e "s/^sha256sums=.*/sha256sums=('$sum')/" pkg/PKGBUILD
+          # makepkg refuses to run as root.
+          useradd -m builder && chown -R builder pkg
+          su builder -c "cd pkg && makepkg --printsrcinfo > .SRCINFO"
+
+          install -d -m 700 ~/.ssh
+          echo "$AUR_KEY" > ~/.ssh/aur && chmod 600 ~/.ssh/aur
+          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/aur"
+          git clone ssh://aur@aur.archlinux.org/timezones.git aur
+          cp pkg/PKGBUILD pkg/.SRCINFO aur/
+          cd aur
+          git config user.name "Hernan Lozano"
+          git config user.email "hernantz@gmail.com"
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then
+            echo "AUR already at $VERSION"
+            exit 0
+          fi
+          git commit -m "Update to $VERSION"
+          git push origin HEAD:master
