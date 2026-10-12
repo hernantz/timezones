@@ -4,34 +4,127 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Timezones</title>
+<meta name="description" content="World clocks for GNOME: one row per city on a shared timeline.">
+<link rel="icon" href="images/@APP_ID@.svg" type="image/svg+xml">
 <style>
-  :root { color-scheme: light dark; --fg: #1e1e1e; --bg: #fafafa; --code: #ebebeb; --link: #1c71d8; }
-  @media (prefers-color-scheme: dark) {
-    :root { --fg: #f0f0f0; --bg: #242424; --code: #363636; --link: #78aeed; }
+  :root {
+    color-scheme: light dark;
+    --fg: #1e1e1e; --muted: #5e5c64; --bg: #fafafa; --card: #ffffff;
+    --code: #ebebeb; --link: #1c71d8; --line: #deddda;
   }
-  body { font: 16px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg);
-         max-width: 40rem; margin: 3rem auto; padding: 0 16px; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #f0f0f0; --muted: #b5b3ba; --bg: #242424; --card: #2e2e32;
+      --code: #363636; --link: #78aeed; --line: #3d3d42;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { font: 16px/1.55 system-ui, sans-serif; color: var(--fg); background: var(--bg); margin: 0; }
+  main { max-width: 64rem; margin: 0 auto; padding: 3rem 16px 4rem; }
   a { color: var(--link); }
-  pre { background: var(--code); padding: .75rem 1rem; border-radius: 8px; overflow-x: auto; }
+  img { display: block; max-width: 100%; height: auto; }
+  pre { background: var(--code); padding: .75rem 1rem; border-radius: 8px; overflow-x: auto; margin: .5rem 0 0; }
+  code { font-size: .92em; }
+  h2 { margin: 3rem 0 .75rem; font-size: 1.35rem; }
+
+  header { text-align: center; }
+  header img { width: 128px; height: 128px; margin: 0 auto 1rem; }
+  header h1 { margin: 0; font-size: 2.4rem; letter-spacing: -.01em; }
+  header p { margin: .5rem auto 0; max-width: 36rem; color: var(--muted); font-size: 1.1rem; }
+
+  .hero { margin: 2.5rem auto 0; }
+  .shot { border-radius: 12px; }
+
+  /* Prose at a readable measure; the command gets the full width. */
+  .install p, .install ul { max-width: 44rem; }
+  .install ul { padding-left: 1.2rem; }
+  .install li { margin: .35rem 0; }
+
+  .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+  .gallery figure { margin: 0; }
+  .gallery figcaption { margin-top: .5rem; color: var(--muted); font-size: .95rem; }
+  .phones { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+  .phones figure { margin: 0; width: 15rem; max-width: 100%; }
+  .phones figcaption { margin-top: .5rem; color: var(--muted); font-size: .95rem; text-align: center; }
+  @media (max-width: 40rem) {
+    .gallery { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  footer { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .95rem; }
 </style>
 </head>
 <body>
-<h1>Timezones</h1>
-<p>World clocks for GNOME: one row per city on a shared timeline.</p>
+<main>
+<header>
+  <img src="images/@APP_ID@.svg" width="128" height="128" alt="">
+  <h1>Timezones</h1>
+  <p>One timezone row per city on a shared timeline, so a glance
+     tells you who is asleep, who is at work, and when to meet.</p>
+</header>
 
-<h2>Install with Flatpak</h2>
-<p>Open <a href="@APP_ID@.flatpakref">@APP_ID@.flatpakref</a> with GNOME Software, or run:</p>
-<pre>flatpak install --user @URL@/@APP_ID@.flatpakref</pre>
-<p>Updates then arrive through <code>flatpak update</code> and GNOME Software.
-The GNOME runtime comes from Flathub, which is added automatically if missing.</p>
+<picture class="hero">
+  <source srcset="images/main-dark.png" media="(prefers-color-scheme: dark)">
+  <img class="shot" src="images/main-light.png" width="1010" height="610"
+       alt="The main window, with an hour parked on the shared timeline">
+</picture>
 
-<h2>Other ways to install</h2>
-<ul>
-  <li>Fedora: <code>sudo dnf copr enable hernantz/timezones &amp;&amp; sudo dnf install timezones</code></li>
-  <li>Arch Linux: <code>timezones</code> from the AUR</li>
-  <li>A <code>.flatpak</code> file on the <a href="https://github.com/hernantz/timezones/releases">releases page</a></li>
-</ul>
+<section class="install">
+  <h2>Install with Flatpak</h2>
+  <p>Open <a href="@APP_ID@.flatpakref">@APP_ID@.flatpakref</a> with GNOME Software, or run:</p>
+  <pre>flatpak install --user @URL@/@APP_ID@.flatpakref</pre>
+  <p>Updates then arrive through <code>flatpak update</code> and GNOME Software.
+     The GNOME runtime comes from Flathub, which is added automatically if missing.</p>
 
-<p><a href="https://github.com/hernantz/timezones">Source code and issues</a></p>
+  <h2>Other ways to install</h2>
+  <ul>
+    <li>Fedora: <code>sudo dnf copr enable hernantz/timezones &amp;&amp; sudo dnf install timezones</code></li>
+    <li>Arch Linux: <code>timezones</code> from the AUR</li>
+    <li>A <code>.flatpak</code> file on the <a href="https://github.com/hernantz/timezones/releases">releases page</a></li>
+  </ul>
+</section>
+
+<h2>A closer look</h2>
+<div class="gallery">
+  <figure>
+    <picture>
+      <source srcset="images/daylight-saving-warnings-dark.png" media="(prefers-color-scheme: dark)">
+      <img class="shot" src="images/daylight-saving-warnings-light.png" width="1010" height="610" loading="lazy"
+           alt="Daylight-saving warnings on two rows whose clocks change that day">
+    </picture>
+    <figcaption>Daylight shading, and a warning on any city whose clocks change that day.</figcaption>
+  </figure>
+  <figure>
+    <picture>
+      <source srcset="images/add-timezone-dark.png" media="(prefers-color-scheme: dark)">
+      <img class="shot" src="images/add-timezone-light.png" width="1010" height="610" loading="lazy"
+           alt="Searching for a city to add">
+    </picture>
+    <figcaption>Search cities, countries and abbreviations, each with its current time.</figcaption>
+  </figure>
+</div>
+
+<div class="phones">
+  <figure>
+    <picture>
+      <source srcset="images/mobile-dark.png" media="(prefers-color-scheme: dark)">
+      <img class="shot" src="images/mobile-light.png" width="458" height="819" loading="lazy"
+           alt="The stacked layout at phone width">
+    </picture>
+    <figcaption>Adapts down to phone width.</figcaption>
+  </figure>
+  <figure>
+    <picture>
+      <source srcset="images/mobile-preferences-dark.png" media="(prefers-color-scheme: dark)">
+      <img class="shot" src="images/mobile-preferences-light.png" width="458" height="819" loading="lazy"
+           alt="Appearance, time format and view preferences">
+    </picture>
+    <figcaption>Light or dark, 12 or 24 hours.</figcaption>
+  </figure>
+</div>
+
+<footer>
+  <a href="https://github.com/hernantz/timezones">Source code and issues</a> · GPL-3.0-or-later
+</footer>
+</main>
 </body>
 </html>

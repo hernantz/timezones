@@ -128,9 +128,21 @@ flatpak-repo:
 		'Url=$(FLATPAK_URL)/repo/' 'SuggestRemoteName=timezones' 'IsRuntime=false' \
 		'RuntimeRepo=$(FLATHUB_REPO)' "GPGKey=$$key" \
 		> $(SITE)/$(APP_ID).flatpakref
+	@$(MAKE) --no-print-directory site-page
+	@echo "$(SITE): repo, .flatpakrepo, .flatpakref and the page"
+
+# The landing page beside the repository, with the icon and the screenshots it
+# shows (each in its light and dark variant). Also runs alone, to preview it.
+SITE_SCREENSHOTS = main daylight-saving-warnings add-timezone mobile mobile-preferences
+
+site-page:
+	@mkdir -p $(SITE)/images
 	@sed -e 's|@URL@|$(FLATPAK_URL)|g' -e 's|@APP_ID@|$(APP_ID)|g' \
 		packaging/flatpak/index.html > $(SITE)/index.html
-	@echo "$(SITE): repo, .flatpakrepo, .flatpakref and index.html"
+	@cp data/icons/hicolor/scalable/apps/$(APP_ID).svg $(SITE)/images/
+	@for s in $(SITE_SCREENSHOTS); do \
+		cp data/screenshots/$$s-light.png data/screenshots/$$s-dark.png $(SITE)/images/; \
+	done
 
 # A single-file installer for GitHub Releases. It carries the repo's key and
 # URL, so an install from it keeps updating from $(FLATPAK_URL).
@@ -182,4 +194,4 @@ flatpark-registry:
 		packaging/flatpark/$(APP_ID).yml > $(FLATPARK_DIR)/$(APP_ID).yml && \
 	echo "$(FLATPARK_DIR)"
 
-.PHONY: setup build run install clean test pot version release tag flathub flatpak-repo bundle flatpark-payload flatpark-registry
+.PHONY: setup build run install clean test pot version release tag flathub flatpak-repo site-page bundle flatpark-payload flatpark-registry
