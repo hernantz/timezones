@@ -1,5 +1,7 @@
 # Packit builds the rpm in COPR (hernantz/timezones) whenever a GitHub Release
-# is published; the release workflow creates that Release from the tag.
+# is published; the release workflow creates that Release from the tag. Pull
+# requests get a test build too, in Packit's own COPR namespace, so a broken
+# spec shows up as a failed check instead of at release time.
 specfile_path: packaging/rpm/timezones.spec
 upstream_package_name: timezones
 downstream_package_name: timezones
@@ -17,3 +19,8 @@ jobs:
       - fedora-44-aarch64
       - fedora-45-x86_64
       - fedora-45-aarch64
+
+  - job: copr_build
+    trigger: pull_request
+    targets:
+      - fedora-44-x86_64
