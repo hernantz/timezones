@@ -75,7 +75,7 @@ tag:
 		{ echo "no <release> for $$v in $(METAINFO); run make release first"; exit 1; }; \
 	! grep -q '$(NOTES_TODO)' $(METAINFO) || \
 		{ echo "write the release notes in $(METAINFO) first"; exit 1; }; \
-	other=$$(git status --porcelain | grep -v -E ' (src/VERSION|$(SPEC)|$(PKGBUILD)|$(METAINFO))$$'); \
+	other=$$(git status --porcelain | grep -v -E ' (src/VERSION|$(SPEC)|$(PKGBUILD)|$(METAINFO)|po/[^/]+\.po)$$'); \
 	test -z "$$other" || { echo "uncommitted changes outside the release files:"; echo "$$other"; exit 1; }; \
 	{ git diff --quiet HEAD || git commit -q -am "Release $$v"; } && \
 	git tag -a "v$$v" -m "Release $$v" && \
