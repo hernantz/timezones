@@ -63,6 +63,15 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.1.0" date="2026-10-12">
+      <description>
+        <p>A smaller release with one change of behavior and one fix:</p>
+        <ul>
+          <li>New installs start with an empty list instead of a preset selection of cities</li>
+          <li>Long city descriptions no longer break the layout of the add dialog</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-10-06">
       <description>
         <p>First release.</p>

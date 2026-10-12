@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: timezones\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-06 18:21-0300\n"
+"POT-Creation-Date: 2026-10-12 15:19-0300\n"
 "PO-Revision-Date: 2026-09-25 23:12-0300\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: Spanish\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: data/io.github.hernantz.timezones.desktop:3
 #: data/appdata/io.github.hernantz.timezones.metainfo.xml:6 src/app.py:101
-#: src/main_window.py:139 src/main_window.py:1033
+#: src/main_window.py:126 src/main_window.py:1020
 msgid "Timezones"
 msgstr "Husos horarios"
 
@@ -74,7 +74,8 @@ msgstr "Una hora fijada en la línea de tiempo compartida"
 
 #: data/appdata/io.github.hernantz.timezones.metainfo.xml:31
 msgid "Four cities across a full day, with daylight shading"
-msgstr "Cuatro ciudades a lo largo de un día completo, con sombreado de día y noche"
+msgstr ""
+"Cuatro ciudades a lo largo de un día completo, con sombreado de día y noche"
 
 #: data/appdata/io.github.hernantz.timezones.metainfo.xml:35
 msgid "Searching the timezone list"
@@ -93,38 +94,55 @@ msgid "The same list in the dark theme"
 msgstr "La misma lista con el tema oscuro"
 
 #: data/appdata/io.github.hernantz.timezones.metainfo.xml:68
+msgid "A smaller release with one change of behavior and one fix:"
+msgstr "Una versión pequeña, con un cambio de comportamiento y una corrección:"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:70
+msgid ""
+"New installs start with an empty list instead of a preset selection of cities"
+msgstr ""
+"Las instalaciones nuevas comienzan con una lista vacía en lugar de una "
+"selección de ciudades predeterminada"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:71
+msgid "Long city descriptions no longer break the layout of the add dialog"
+msgstr ""
+"Las descripciones largas de ciudades ya no rompen el diseño del diálogo para "
+"agregar"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:77
 msgid "First release."
 msgstr "Primera versión."
 
-#: src/add_dialog.py:167
+#: src/add_dialog.py:169
 msgid "Already added"
 msgstr "Ya agregado"
 
-#: src/add_dialog.py:187 src/main_window.py:145 src/main_window.py:431
+#: src/add_dialog.py:189 src/main_window.py:132 src/main_window.py:418
 msgid "Add Timezone"
 msgstr "Agregar huso horario"
 
-#: src/add_dialog.py:206
+#: src/add_dialog.py:208
 msgid "Search for a city or timezone"
 msgstr "Buscar una ciudad o huso horario"
 
-#: src/add_dialog.py:216
+#: src/add_dialog.py:218
 msgid "Results"
 msgstr "Resultados"
 
-#: src/add_dialog.py:233
+#: src/add_dialog.py:239
 msgid "Search for a City"
 msgstr "Busca una ciudad"
 
-#: src/add_dialog.py:233
+#: src/add_dialog.py:239
 msgid "Type a city, country, or timezone name."
 msgstr "Escribe el nombre de una ciudad, un país o un huso horario."
 
-#: src/add_dialog.py:239
+#: src/add_dialog.py:245
 msgid "No Results"
 msgstr "Sin resultados"
 
-#: src/add_dialog.py:239
+#: src/add_dialog.py:245
 msgid "Try a different city, country, or timezone name."
 msgstr "Prueba con otra ciudad, país o nombre de huso horario."
 
@@ -174,177 +192,181 @@ msgctxt "strftime format"
 msgid "%a %-d"
 msgstr "%a %-d"
 
-#: src/main_window.py:152
+#: src/main_window.py:139
 msgid "Jump to Date"
 msgstr "Ir a una fecha"
 
-#: src/main_window.py:162
+#: src/main_window.py:149
 msgid "Today"
 msgstr "Hoy"
 
-#: src/main_window.py:163
+#: src/main_window.py:150
 msgid "Back to Today"
 msgstr "Volver a hoy"
 
-#: src/main_window.py:171
+#: src/main_window.py:158
 msgctxt "clock format"
 msgid "24h"
 msgstr "24 h"
 
-#: src/main_window.py:172
+#: src/main_window.py:159
 msgctxt "clock format"
 msgid "12h"
 msgstr "12 h"
 
-#: src/main_window.py:303
+#: src/main_window.py:290
 msgid "Discard selected time"
 msgstr "Descartar la hora seleccionada"
 
-#: src/main_window.py:319
+#: src/main_window.py:306
 msgid "Copy all times to the clipboard"
 msgstr "Copiar todas las horas al portapapeles"
 
-#: src/main_window.py:321
+#: src/main_window.py:308
 msgid "Copy"
 msgstr "Copiar"
 
-#: src/main_window.py:328
+#: src/main_window.py:315
 #, python-brace-format
 msgid "Save a {n}-minute event to your calendar"
 msgid_plural "Save a {n}-minute event to your calendar"
 msgstr[0] "Guardar un evento de {n} minuto en tu calendario"
 msgstr[1] "Guardar un evento de {n} minutos en tu calendario"
 
-#: src/main_window.py:333
+#: src/main_window.py:320
 msgid "Save event"
 msgstr "Guardar evento"
 
-#: src/main_window.py:403
+#: src/main_window.py:390
 msgid "Times copied"
 msgstr "Horas copiadas"
 
-#: src/main_window.py:413
+#: src/main_window.py:400
 #, python-brace-format
 msgid "Couldn't write the event: {error}"
 msgstr "No se pudo escribir el evento: {error}"
 
-#: src/main_window.py:420
+#: src/main_window.py:407
 #, python-brace-format
 msgid "Couldn't open a calendar: {error}"
 msgstr "No se pudo abrir un calendario: {error}"
 
-#: src/main_window.py:428
+#: src/main_window.py:415
 msgid "No Timezones"
 msgstr "Sin husos horarios"
 
-#: src/main_window.py:429
+#: src/main_window.py:416
 msgid "Add a city to keep track of the time where it matters to you."
 msgstr "Agrega una ciudad para seguir la hora donde te importa."
 
-#: src/main_window.py:441 src/main_window.py:1016
+#: src/main_window.py:428 src/main_window.py:1003
 msgid "Preferences"
 msgstr "Preferencias"
 
-#: src/main_window.py:442 src/main_window.py:1020
+#: src/main_window.py:429 src/main_window.py:1007
 msgid "Keyboard Shortcuts"
 msgstr "Atajos de teclado"
 
-#: src/main_window.py:443
+#: src/main_window.py:430
 msgid "About Timezones"
 msgstr "Acerca de Husos horarios"
 
-#: src/main_window.py:447
+#: src/main_window.py:434
 msgid "Main Menu"
 msgstr "Menú principal"
 
-#: src/main_window.py:810
+#: src/main_window.py:797
 msgid "These timezones were saved by a newer version; changes won't be saved"
-msgstr "Estos husos horarios se guardaron con una versión más nueva; los cambios no se guardarán"
+msgstr ""
+"Estos husos horarios se guardaron con una versión más nueva; los cambios no "
+"se guardarán"
 
-#: src/main_window.py:812
+#: src/main_window.py:799
 #, python-brace-format
 msgid "Couldn't read the saved timezones; the file was kept as {name}"
-msgstr "No se pudieron leer los husos horarios guardados; el archivo se conservó como {name}"
+msgstr ""
+"No se pudieron leer los husos horarios guardados; el archivo se conservó "
+"como {name}"
 
-#: src/main_window.py:879
+#: src/main_window.py:866
 msgid "Edit label"
 msgstr "Editar etiqueta"
 
-#: src/main_window.py:880
+#: src/main_window.py:867
 #, python-brace-format
 msgid "Set a label for {city}"
 msgstr "Pon una etiqueta para {city}"
 
-#: src/main_window.py:886
+#: src/main_window.py:873
 msgid "_Cancel"
 msgstr "_Cancelar"
 
-#: src/main_window.py:887
+#: src/main_window.py:874
 msgid "C_lear"
 msgstr "_Borrar"
 
-#: src/main_window.py:888
+#: src/main_window.py:875
 msgid "_Save"
 msgstr "_Guardar"
 
-#: src/main_window.py:943
+#: src/main_window.py:930
 #, python-brace-format
 msgid "Removed {city}"
 msgstr "Se quitó {city}"
 
-#: src/main_window.py:946
+#: src/main_window.py:933
 #, python-brace-format
 msgid "Removed {n} timezone"
 msgid_plural "Removed {n} timezones"
 msgstr[0] "Se quitó {n} huso horario"
 msgstr[1] "Se quitaron {n} husos horarios"
 
-#: src/main_window.py:951
+#: src/main_window.py:938
 msgid "_Undo"
 msgstr "_Deshacer"
 
-#: src/main_window.py:1014
+#: src/main_window.py:1001
 msgid "Add timezone"
 msgstr "Agregar huso horario"
 
-#: src/main_window.py:1015
+#: src/main_window.py:1002
 msgid "Back to today"
 msgstr "Volver a hoy"
 
-#: src/main_window.py:1017
+#: src/main_window.py:1004
 msgid "Quit"
 msgstr "Salir"
 
 #. Translators: a line of the keyboard shortcuts list, as in
 #. "Quit: Ctrl+Q".
-#: src/main_window.py:1024
+#: src/main_window.py:1011
 #, python-brace-format
 msgid "{action}: {keys}"
 msgstr "{action}: {keys}"
 
-#: src/main_window.py:1028
+#: src/main_window.py:1015
 msgid "_Close"
 msgstr "_Cerrar"
 
-#: src/main_window.py:1038
+#: src/main_window.py:1025
 msgid "Keep track of the time in cities that matter to you."
 msgstr "Sigue la hora en las ciudades que te importan."
 
 #. Translators: replace with your name, and your email address if
 #. you like, one translator per line.
-#: src/main_window.py:1041
+#: src/main_window.py:1028
 msgid "translator-credits"
 msgstr "Hernan Lozano"
 
-#: src/main_window.py:1050
+#: src/main_window.py:1037
 msgid "Reorder Timezones"
 msgstr "Reordenar husos horarios"
 
-#: src/main_window.py:1074 src/row.py:220
+#: src/main_window.py:1061 src/row.py:220
 msgid "Move up"
 msgstr "Subir"
 
-#: src/main_window.py:1078 src/row.py:221
+#: src/main_window.py:1065 src/row.py:221
 msgid "Move down"
 msgstr "Bajar"
 

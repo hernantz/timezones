@@ -3,7 +3,7 @@
 # pkgver is set by `make release`; the release workflow fills in sha256sums
 # from the tag's tarball and pushes this file, with its .SRCINFO, to the AUR.
 pkgname=timezones
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="World time clocks with native GTK4 UI"
 arch=('any')

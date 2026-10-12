@@ -1,5 +1,5 @@
 Name:           timezones
-Version:        1.0.0
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        World time clocks with native GTK4 UI
 License:        GPL-3.0-or-later
@@ -80,5 +80,9 @@ appstreamcli validate --no-net %{buildroot}%{_metainfodir}/io.github.hernantz.ti
 %{_datadir}/icons/hicolor/scalable/apps/io.github.hernantz.timezones.svg
 
 %changelog
+* Mon Oct 12 2026 Hernan Lozano <hernantz@gmail.com> - 1.1.0-1
+- New installs start with an empty list instead of preset cities.
+- Long city descriptions no longer break the add dialog.
+
 * Tue Oct 06 2026 Hernan Lozano <hernantz@gmail.com> - 1.0.0-1
 - First release.
