@@ -43,9 +43,9 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
     steps:
+      # The image is org.flatpak.Builder's tree plus the GNOME SDK, with no
+      # package manager; it already has make, gpg, jq, xz and tar.
       - uses: actions/checkout@v4
-      # What the make targets use beyond flatpak-builder; already-present ones are skipped.
-      - run: dnf -y install make gnupg2 jq xz tar
       - uses: actions/cache@v4
         with:
           path: .flatpak-builder
@@ -148,7 +148,9 @@ jobs:
           install -d -m 700 ~/.ssh
           echo "$AUR_KEY" > ~/.ssh/aur && chmod 600 ~/.ssh/aur
           ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
-          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/aur"
+          # The container's HOME is /github/home, but ssh looks for ~/.ssh in
+          # root's passwd entry (/root), so both files are named outright.
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/aur -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
           git clone ssh://aur@aur.archlinux.org/timezones.git aur
           cp pkg/PKGBUILD pkg/.SRCINFO aur/
           cd aur
