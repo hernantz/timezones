@@ -123,6 +123,16 @@ Or download `timezones-<version>.flatpak` from the
 it installs from the same repository, so it updates the same way. Either way
 the GNOME runtime comes from Flathub, which is added if missing.
 
+### FlatPark
+
+Also listed on [FlatPark](https://flatpark.org/apps/io.github.hernantz.timezones/),
+a community Flatpak repository:
+
+```sh
+flatpak --user remote-add --if-not-exists flatpark https://dl.flatpark.org/flatpark.flatpakrepo
+flatpak --user install flatpark io.github.hernantz.timezones
+```
+
 ### Fedora (COPR)
 
 ```sh
@@ -151,123 +161,11 @@ flatpak-builder --user --install --force-clean build-flatpak packaging/flatpak/i
 flatpak run io.github.hernantz.timezones
 ```
 
-## Development
+## Contributing
 
-```sh
-make run        # builds, compiles the schema, runs from the source tree
-```
-
-`make run` sets `TIMEZONES_DEV=1`, which makes the application non-unique so a
-source-tree run is not swallowed by an installed copy holding the same
-application id.
-
-Runtime requirements: Python 3.9+ (`zoneinfo` is stdlib), PyGObject, GTK 4,
-libadwaita ≥ 1.7 and libgweather 4 with its GObject introspection data
-(`GWeather-4.0`), which supplies the city database the add dialog searches. No timezone package is bundled — the IANA database is read
-from disk, including `zone.tab` and `iso3166.tab` for each zone's coordinates
-and country.
-
-Layout:
-
-| Path | What lives there |
-| --- | --- |
-| `src/main_window.py` | The window, the scrub state machine, actions |
-| `src/timeline.py` | The 24-column strip: cells, cursors, date flags |
-| `src/row.py` | One city's row — identity, time block, strip, menu |
-| `src/tzinfo_helpers.py` | IANA tables, solar elevation, DST transitions |
-| `src/share.py` | Clipboard text and `.ics` export |
-| `src/model.py` | Cities and the column arithmetic |
-| `data/` | Desktop entry, GSettings schema, icons, CSS, metainfo |
-| `po/` | Translations: `timezones.pot` template and one `<lang>.po` per language |
-
-### Localization
-
-The app's own strings are translated with gettext, one `po/<lang>.po` per
-language. City and country names are not in there: they come from the
-system's `gweather-locations` and `iso-codes` catalogs, so they are already
-translated wherever those packages are. Cities beyond the one each IANA zone is
-named for — Seattle, filed under `America/Los_Angeles` — come from libgweather,
-which translates them itself.
-
-**Updating an existing translation** after strings have changed in the code:
-
-```sh
-make pot                # regenerate po/timezones.pot and merge it into every po/<lang>.po
-```
-
-Then open `po/<lang>.po` (in a text editor or a tool such as Poedit or GNOME
-Translation Editor) and fill in the empty `msgstr ""` entries and any marked
-`#, fuzzy` — a fuzzy entry is a guess from a similar old string, and is ignored
-until the flag is removed.
-
-**Adding a new language**, say French:
-
-```sh
-echo fr >> po/LINGUAS                               # register the language code
-make pot                                            # make sure the template is current
-msginit -i po/timezones.pot -o po/fr.po -l fr_FR.UTF-8 --no-translator
-```
-
-Translate `po/fr.po`, then check it and try it out:
-
-```sh
-msgfmt --check --statistics -o /dev/null po/fr.po   # catches broken placeholders
-LANGUAGE=fr LC_ALL=fr_FR.UTF-8 make run
-```
-
-Set both variables when running: `LANGUAGE` picks the translated text, `LC_ALL`
-picks date words, AM/PM and the first day of the week. If the new language does
-not show up, `meson setup --reconfigure builddir` makes meson re-read
-`po/LINGUAS`.
-
-Things to know while translating:
-
-- Comments starting with `Translators:` above an entry explain what it is for.
-- Entries with a `msgctxt` are short strings that mean different things in
-  different places (a lone "M" is Monday's initial); translate each for its own
-  context.
-- Date formats such as `%b %-d` are translatable on purpose: reorder them to
-  suit the language (`%-d %b`), and the locale fills in the words.
-- Keep every `{placeholder}` and `%` directive from the original.
-
-**Adding a translatable string** in code: wrap it in `_()` (or `C_()`,
-`ngettext()`, `N_()` — see `src/i18n.py`), add the file to `po/POTFILES.in` if it
-is not listed yet, and run `make pot`.
-
-## Releasing
-
-`src/VERSION` is the version; meson and `src/const.py` read it, and the rpm
-spec, the PKGBUILD and the metainfo `<releases>` are kept in step by
-`make release`.
-
-```sh
-make release VERSION=1.2.0   # bumps the version, adds a metainfo <release> and changelog entries
-# write the notes: replace "TODO: release notes" in data/appdata/*.metainfo.xml
-make pot                     # the notes are translatable; translate them in po/<lang>.po
-make tag                     # commits the release files and tags v1.2.0
-git push --follow-tags
-```
-
-`make tag` refuses while the notes are still the placeholder or anything outside
-the release files is uncommitted. Pushing the tag runs
-`.github/workflows/release.yml`, which:
-
-- builds the Flatpak, signs it and publishes the repository on GitHub Pages
-  (`make flatpak-repo`), so existing installs update;
-- creates the GitHub Release, with the metainfo notes, the `.flatpak` bundle
-  (`make bundle`) and the prebuilt tree FlatPark repackages
-  (`make flatpark-payload`);
-- pushes the PKGBUILD to the AUR with the tag tarball's checksum.
-
-[Packit](https://packit.dev) (`.packit.yaml`) builds the rpm in the
-`hernantz/timezones` COPR when the Release appears. FlatPark notices the new
-Release by itself through `packaging/flatpark/resolve-update.sh` and opens its
-own update PR. The make targets the workflow runs work locally too.
-
-The [FlatPark](https://flatpark.org) listing is a folder in the
-`flatpark/flatpark` repository: `make flatpark-registry` assembles it, pinned to
-the current release's published tree, from the templates in
-`packaging/flatpark/`.
+Pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers running
+the app from source, the code layout, what to test, translations and how
+releases are made.
 
 ## License
 
