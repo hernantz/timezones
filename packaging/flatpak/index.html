@@ -34,6 +34,13 @@
 
   .hero { margin: 2.5rem auto 0; }
   .shot { border-radius: 12px; }
+  .zoom { display: block; cursor: zoom-in; border-radius: 12px; }
+  .zoom:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+
+  /* The full-size view a screenshot opens in. */
+  #viewer { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 94vh; cursor: zoom-out; }
+  #viewer::backdrop { background: rgb(0 0 0 / .8); }
+  #viewer img { max-width: 96vw; max-height: 94vh; width: auto; height: auto; border-radius: 12px; }
 
   /* Prose at a readable measure; the command gets the full width. */
   .install p, .install ul { max-width: 44rem; }
@@ -62,11 +69,13 @@
      tells you who is asleep, who is at work, and when to meet.</p>
 </header>
 
-<picture class="hero">
-  <source srcset="images/main-dark.png" media="(prefers-color-scheme: dark)">
-  <img class="shot" src="images/main-light.png" width="1010" height="610"
-       alt="The main window, with an hour parked on the shared timeline">
-</picture>
+<a class="zoom hero" href="images/main-light.png">
+  <picture>
+    <source srcset="images/main-dark.png" media="(prefers-color-scheme: dark)">
+    <img class="shot" src="images/main-light.png" width="1010" height="610"
+         alt="The main window, with an hour parked on the shared timeline">
+  </picture>
+</a>
 
 <section class="install">
   <h2>Install with Flatpak</h2>
@@ -77,6 +86,8 @@
 
   <h2>Other ways to install</h2>
   <ul>
+    <li><a href="https://flatpark.org/apps/@APP_ID@/">FlatPark</a>, if you already use it:
+        <code>flatpak --user install flatpark @APP_ID@</code></li>
     <li>Fedora: <code>sudo dnf copr enable hernantz/timezones &amp;&amp; sudo dnf install timezones</code></li>
     <li>Arch Linux: <code>timezones</code> from the AUR</li>
     <li>A <code>.flatpak</code> file on the <a href="https://github.com/hernantz/timezones/releases">releases page</a></li>
@@ -86,38 +97,46 @@
 <h2>A closer look</h2>
 <div class="gallery">
   <figure>
-    <picture>
-      <source srcset="images/daylight-saving-warnings-dark.png" media="(prefers-color-scheme: dark)">
-      <img class="shot" src="images/daylight-saving-warnings-light.png" width="1010" height="610" loading="lazy"
-           alt="Daylight-saving warnings on two rows whose clocks change that day">
-    </picture>
+    <a class="zoom" href="images/daylight-saving-warnings-light.png">
+      <picture>
+        <source srcset="images/daylight-saving-warnings-dark.png" media="(prefers-color-scheme: dark)">
+        <img class="shot" src="images/daylight-saving-warnings-light.png" width="1010" height="610" loading="lazy"
+             alt="Daylight-saving warnings on two rows whose clocks change that day">
+      </picture>
+    </a>
     <figcaption>Daylight shading, and a warning on any city whose clocks change that day.</figcaption>
   </figure>
   <figure>
-    <picture>
-      <source srcset="images/add-timezone-dark.png" media="(prefers-color-scheme: dark)">
-      <img class="shot" src="images/add-timezone-light.png" width="1010" height="610" loading="lazy"
-           alt="Searching for a city to add">
-    </picture>
+    <a class="zoom" href="images/add-timezone-light.png">
+      <picture>
+        <source srcset="images/add-timezone-dark.png" media="(prefers-color-scheme: dark)">
+        <img class="shot" src="images/add-timezone-light.png" width="1010" height="610" loading="lazy"
+             alt="Searching for a city to add">
+      </picture>
+    </a>
     <figcaption>Search cities, countries and abbreviations, each with its current time.</figcaption>
   </figure>
 </div>
 
 <div class="phones">
   <figure>
-    <picture>
-      <source srcset="images/mobile-dark.png" media="(prefers-color-scheme: dark)">
-      <img class="shot" src="images/mobile-light.png" width="458" height="819" loading="lazy"
-           alt="The stacked layout at phone width">
-    </picture>
+    <a class="zoom" href="images/mobile-light.png">
+      <picture>
+        <source srcset="images/mobile-dark.png" media="(prefers-color-scheme: dark)">
+        <img class="shot" src="images/mobile-light.png" width="458" height="819" loading="lazy"
+             alt="The stacked layout at phone width">
+      </picture>
+    </a>
     <figcaption>Adapts down to phone width.</figcaption>
   </figure>
   <figure>
-    <picture>
-      <source srcset="images/mobile-preferences-dark.png" media="(prefers-color-scheme: dark)">
-      <img class="shot" src="images/mobile-preferences-light.png" width="458" height="819" loading="lazy"
-           alt="Appearance, time format and view preferences">
-    </picture>
+    <a class="zoom" href="images/mobile-preferences-light.png">
+      <picture>
+        <source srcset="images/mobile-preferences-dark.png" media="(prefers-color-scheme: dark)">
+        <img class="shot" src="images/mobile-preferences-light.png" width="458" height="819" loading="lazy"
+             alt="Appearance, time format and view preferences">
+      </picture>
+    </a>
     <figcaption>Light or dark, 12 or 24 hours.</figcaption>
   </figure>
 </div>
@@ -126,5 +145,27 @@
   <a href="https://github.com/hernantz/timezones">Source code and issues</a> · GPL-3.0-or-later
 </footer>
 </main>
+
+<dialog id="viewer" aria-label="Screenshot">
+  <img alt="">
+</dialog>
+<script>
+  // Open the variant the page is showing (light or dark), not the link's
+  // light fallback; a click anywhere, or Esc, closes it.
+  const viewer = document.getElementById("viewer");
+  const full = viewer.querySelector("img");
+  if (viewer.showModal) {
+    for (const link of document.querySelectorAll("a.zoom")) {
+      link.addEventListener("click", (event) => {
+        const shot = link.querySelector("img");
+        event.preventDefault();
+        full.src = shot.currentSrc || shot.src;
+        full.alt = shot.alt;
+        viewer.showModal();
+      });
+    }
+    viewer.addEventListener("click", () => viewer.close());
+  }
+</script>
 </body>
 </html>
