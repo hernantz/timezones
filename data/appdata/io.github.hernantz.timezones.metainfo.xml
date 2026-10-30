@@ -4,7 +4,7 @@
   <metadata_license>FSFAP</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Timezones</name>
-  <summary>World time clocks with native GTK4 UI</summary>
+  <summary>Compare times around the world</summary>
 
   <description>
     <p>
@@ -50,6 +50,13 @@
   </screenshots>
 
   <launchable type="desktop-id">io.github.hernantz.timezones.desktop</launchable>
+
+  <!-- The banner behind the icon on Flathub and in GNOME Software: the
+       app's day and night tones, so the blue globe stands out on both. -->
+  <branding>
+    <color type="primary" scheme_preference="light">#f6d78f</color>
+    <color type="primary" scheme_preference="dark">#1d2b4c</color>
+  </branding>
 
   <url type="homepage">https://github.com/hernantz/timezones</url>
   <url type="bugtracker">https://github.com/hernantz/timezones/issues</url>

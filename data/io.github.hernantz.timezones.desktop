@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Timezones
-Comment=World time clocks with native GTK4 UI
+Comment=Compare times around the world
 Exec=timezones
 Icon=io.github.hernantz.timezones
 Terminal=false

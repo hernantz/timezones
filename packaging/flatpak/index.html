@@ -57,7 +57,7 @@
     .gallery { grid-template-columns: minmax(0, 1fr); }
   }
 
-  footer { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .95rem; }
+  footer { text-align: center; margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .95rem; }
 </style>
 </head>
 <body>
@@ -78,14 +78,15 @@
 </a>
 
 <section class="install">
-  <h2>Install with Flatpak</h2>
-  <p>Open <a href="@APP_ID@.flatpakref">@APP_ID@.flatpakref</a> with GNOME Software, or run:</p>
-  <pre>flatpak install --user @URL@/@APP_ID@.flatpakref</pre>
-  <p>Updates then arrive through <code>flatpak update</code> and GNOME Software.
-     The GNOME runtime comes from Flathub, which is added automatically if missing.</p>
+  <h2>Install from Flathub</h2>
+  <p><a href="https://flathub.org/apps/@APP_ID@">Get it on Flathub</a>, from GNOME Software or with:</p>
+  <pre>flatpak install flathub @APP_ID@</pre>
 
   <h2>Other ways to install</h2>
   <ul>
+    <li>This site's own Flatpak repository, which gets new releases before Flathub builds them:
+        open <a href="@APP_ID@.flatpakref">@APP_ID@.flatpakref</a> with GNOME Software, or run
+        <code>flatpak install --user @URL@/@APP_ID@.flatpakref</code></li>
     <li><a href="https://flatpark.org/apps/@APP_ID@/">FlatPark</a>, if you already use it:
         <code>flatpak --user install flatpark @APP_ID@</code></li>
     <li>Fedora: <code>sudo dnf copr enable hernantz/timezones &amp;&amp; sudo dnf install timezones</code></li>

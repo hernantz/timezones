@@ -26,8 +26,8 @@ msgstr "Husos horarios"
 
 #: data/io.github.hernantz.timezones.desktop:4
 #: data/appdata/io.github.hernantz.timezones.metainfo.xml:7
-msgid "World time clocks with native GTK4 UI"
-msgstr "Relojes mundiales con interfaz GTK4 nativa"
+msgid "Compare times around the world"
+msgstr "Compara la hora en todo el mundo"
 
 #: data/appdata/io.github.hernantz.timezones.metainfo.xml:10
 msgid ""

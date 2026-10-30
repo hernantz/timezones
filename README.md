@@ -109,10 +109,19 @@ header drops the 12/24h toggle (it stays in Preferences):
 
 ## Installing
 
-### Flatpak
+### Flathub
 
-From the app's own Flatpak repository, which keeps it updated through
-`flatpak update` and GNOME Software:
+[Get it on Flathub](https://flathub.org/apps/io.github.hernantz.timezones),
+from GNOME Software or with:
+
+```sh
+flatpak install flathub io.github.hernantz.timezones
+```
+
+### Flatpak repository
+
+The app also has its own Flatpak repository, which gets new releases as soon
+as they are tagged, before Flathub builds them:
 
 ```sh
 flatpak install --user https://hernantz.github.io/timezones/io.github.hernantz.timezones.flatpakref
@@ -122,6 +131,10 @@ Or download `timezones-<version>.flatpak` from the
 [releases page](https://github.com/hernantz/timezones/releases) and open it;
 it installs from the same repository, so it updates the same way. Either way
 the GNOME runtime comes from Flathub, which is added if missing.
+
+Installed from this repository and want to move to Flathub?
+`flatpak install --reinstall flathub io.github.hernantz.timezones` switches it
+over and keeps your cities and settings.
 
 ### FlatPark
 
