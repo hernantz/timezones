@@ -58,6 +58,18 @@
     <color type="primary" scheme_preference="dark">#1d2b4c</color>
   </branding>
 
+  <!-- Below 880px the rows stack (main_window._NARROW_WIDTH), and the stacked
+       window's minimum width is 360px, so phones are in. Tapping an hour parks
+       it, the touch equivalent of scrubbing with the pointer. -->
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+
   <url type="homepage">https://github.com/hernantz/timezones</url>
   <url type="bugtracker">https://github.com/hernantz/timezones/issues</url>
   <url type="vcs-browser">https://github.com/hernantz/timezones</url>
