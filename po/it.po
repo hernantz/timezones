@@ -1,0 +1,522 @@
+# Italian translations for timezones package
+# Traduzioni italiane per il pacchetto timezones.
+# Copyright (C) 2026 THE timezones'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the timezones package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: timezones\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-12 15:19-0300\n"
+"PO-Revision-Date: 2026-11-13 21:55+0100\n"
+"Last-Translator: Albano Batistella\n"
+"Language-Team: Italian\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: data/io.github.hernantz.timezones.desktop:3
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:6 src/app.py:101
+#: src/main_window.py:126 src/main_window.py:1020
+msgid "Timezones"
+msgstr "Fusi orari"
+
+#: data/io.github.hernantz.timezones.desktop:4
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:7
+msgid "Compare times around the world"
+msgstr "Confronta l'ora in tutto il mondo"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:10
+msgid ""
+"Keep track of the time in the cities that matter to you. Timezones shows a "
+"row per city on a shared timeline, so a glance tells you who is asleep, who "
+"is at work, and what an hour of your day looks like everywhere at once."
+msgstr ""
+"Tieni d'occhio l'ora nelle città che ti stanno a cuore. Fusi orari mostra "
+"una riga per città su una linea temporale condivisa, così con un colpo "
+"d'occhio capisci chi dorme, chi è al lavoro e come appare un'ora della tua "
+"giornata ovunque nello stesso momento."
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:15
+msgid "Features:"
+msgstr "Caratteristiche:"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:17
+msgid "Scrub the timeline to read the same moment in every city"
+msgstr ""
+"Scorri la linea temporale per leggere lo stesso momento in ogni città"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:18
+msgid ""
+"Daylight shading, so working hours and the middle of the night are obvious"
+msgstr ""
+"Sfumature di luce diurna, per distinguere a colpo d'occhio l'orario di "
+"lavoro e il cuore della notte"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:19
+msgid "Pick any date to plan ahead across daylight saving changes"
+msgstr ""
+"Scegli una data qualsiasi per pianificare attraverso i cambi di ora legale"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:20
+msgid "Share a time as a calendar invitation or as text"
+msgstr "Condividi un orario come invito del calendario o come testo"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:21
+msgid "12- or 24-hour clocks, light and dark themes"
+msgstr "Orologi a 12 o 24 ore, temi chiaro e scuro"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:27
+msgid "An hour parked on the shared timeline"
+msgstr "Un'ora fissata sulla linea temporale condivisa"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:31
+msgid "Four cities across a full day, with daylight shading"
+msgstr ""
+"Quattro città nell'arco di un'intera giornata, con sfumature di luce diurna"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:35
+msgid "Searching the timezone list"
+msgstr "Ricerca nell'elenco dei fusi orari"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:39
+msgid "The stacked layout at phone width"
+msgstr "Il layout impilato a larghezza smartphone"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:43
+msgid "Appearance, time format and view options"
+msgstr "Aspetto, formato dell'ora e opzioni di visualizzazione"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:47
+msgid "The same list in the dark theme"
+msgstr "La stessa lista con il tema scuro"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:68
+msgid "A smaller release with one change of behavior and one fix:"
+msgstr ""
+"Una versione più piccola, con una modifica del comportamento e una "
+"correzione:"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:70
+msgid ""
+"New installs start with an empty list instead of a preset selection of cities"
+msgstr ""
+"Le nuove installazioni partono con una lista vuota invece che con una "
+"selezione predefinita di città"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:71
+msgid "Long city descriptions no longer break the layout of the add dialog"
+msgstr ""
+"Le descrizioni lunghe delle città non rompono più il layout della finestra "
+"di aggiunta"
+
+#: data/appdata/io.github.hernantz.timezones.metainfo.xml:77
+msgid "First release."
+msgstr "Prima versione."
+
+#: src/add_dialog.py:169
+msgid "Already added"
+msgstr "Già aggiunto"
+
+#: src/add_dialog.py:189 src/main_window.py:132 src/main_window.py:418
+msgid "Add Timezone"
+msgstr "Aggiungi fuso orario"
+
+#: src/add_dialog.py:208
+msgid "Search for a city or timezone"
+msgstr "Cerca una città o un fuso orario"
+
+#: src/add_dialog.py:218
+msgid "Results"
+msgstr "Risultati"
+
+#: src/add_dialog.py:239
+msgid "Search for a City"
+msgstr "Cerca una città"
+
+#: src/add_dialog.py:239
+msgid "Type a city, country, or timezone name."
+msgstr "Scrivi il nome di una città, di un paese o di un fuso orario."
+
+#: src/add_dialog.py:245
+msgid "No Results"
+msgstr "Nessun risultato"
+
+#: src/add_dialog.py:245
+msgid "Try a different city, country, or timezone name."
+msgstr "Prova con un'altra città, un altro paese o un altro fuso orario."
+
+#: src/i18n.py:80
+msgctxt "before noon"
+msgid "AM"
+msgstr "AM"
+
+#: src/i18n.py:80
+msgctxt "after noon"
+msgid "PM"
+msgstr "PM"
+
+#. Translators: a 12-hour clock reading. {time} is like "1:30" and
+#. {meridiem} is AM or PM; reorder them if your language writes the
+#. meridiem first (Korean: "{meridiem} {time}").
+#: src/i18n.py:92
+#, python-brace-format
+msgid "{time} {meridiem}"
+msgstr "{time} {meridiem}"
+
+#. Translators: strftime format for a day, as in "Fri, Sep 25". Reorder to
+#. suit your language; %a is the weekday, %b the month and %-d the day.
+#: src/i18n.py:107
+msgctxt "strftime format"
+msgid "%a, %b %-d"
+msgstr "%a %-d %b"
+
+#. Translators: strftime format for a day with its year, as in
+#. "Fri, Sep 25 2026". The header of a copied list of times.
+#: src/i18n.py:113
+msgctxt "strftime format"
+msgid "%a, %b %-d %Y"
+msgstr "%a %-d %b %Y"
+
+#. Translators: strftime format for a day without the weekday, as in
+#. "Mar 29". Used in "Clocks move forward … on Mar 29".
+#: src/i18n.py:119
+msgctxt "strftime format"
+msgid "%b %-d"
+msgstr "%-d %b"
+
+#. Translators: strftime format for the small pill marking where a day
+#. starts on the timeline, as in "FRI 25". It is shown in capitals.
+#: src/i18n.py:125
+msgctxt "strftime format"
+msgid "%a %-d"
+msgstr "%a %-d"
+
+#: src/main_window.py:139
+msgid "Jump to Date"
+msgstr "Vai a una data"
+
+#: src/main_window.py:149
+msgid "Today"
+msgstr "Oggi"
+
+#: src/main_window.py:150
+msgid "Back to Today"
+msgstr "Torna a oggi"
+
+#: src/main_window.py:158
+msgctxt "clock format"
+msgid "24h"
+msgstr "24 h"
+
+#: src/main_window.py:159
+msgctxt "clock format"
+msgid "12h"
+msgstr "12 h"
+
+#: src/main_window.py:290
+msgid "Discard selected time"
+msgstr "Scarta l'orario selezionato"
+
+#: src/main_window.py:306
+msgid "Copy all times to the clipboard"
+msgstr "Copia tutti gli orari negli appunti"
+
+#: src/main_window.py:308
+msgid "Copy"
+msgstr "Copia"
+
+#: src/main_window.py:315
+#, python-brace-format
+msgid "Save a {n}-minute event to your calendar"
+msgid_plural "Save a {n}-minute event to your calendar"
+msgstr[0] "Salva un evento di {n} minuto nel tuo calendario"
+msgstr[1] "Salva un evento di {n} minuti nel tuo calendario"
+
+#: src/main_window.py:320
+msgid "Save event"
+msgstr "Salva evento"
+
+#: src/main_window.py:390
+msgid "Times copied"
+msgstr "Orari copiati"
+
+#: src/main_window.py:400
+#, python-brace-format
+msgid "Couldn't write the event: {error}"
+msgstr "Impossibile scrivere l'evento: {error}"
+
+#: src/main_window.py:407
+#, python-brace-format
+msgid "Couldn't open a calendar: {error}"
+msgstr "Impossibile aprire un calendario: {error}"
+
+#: src/main_window.py:415
+msgid "No Timezones"
+msgstr "Nessun fuso orario"
+
+#: src/main_window.py:416
+msgid "Add a city to keep track of the time where it matters to you."
+msgstr "Aggiungi una città per tenere d'occhio l'ora dove ti interessa."
+
+#: src/main_window.py:428 src/main_window.py:1003
+msgid "Preferences"
+msgstr "Preferenze"
+
+#: src/main_window.py:429 src/main_window.py:1007
+msgid "Keyboard Shortcuts"
+msgstr "Scorciatoie da tastiera"
+
+#: src/main_window.py:430
+msgid "About Timezones"
+msgstr "Informazioni su Fusi orari"
+
+#: src/main_window.py:434
+msgid "Main Menu"
+msgstr "Menu principale"
+
+#: src/main_window.py:797
+msgid "These timezones were saved by a newer version; changes won't be saved"
+msgstr ""
+"Questi fusi orari sono stati salvati da una versione più recente; le "
+"modifiche non verranno salvate"
+
+#: src/main_window.py:799
+#, python-brace-format
+msgid "Couldn't read the saved timezones; the file was kept as {name}"
+msgstr ""
+"Impossibile leggere i fusi orari salvati; il file è stato conservato come "
+"{name}"
+
+#: src/main_window.py:866
+msgid "Edit label"
+msgstr "Modifica etichetta"
+
+#: src/main_window.py:867
+#, python-brace-format
+msgid "Set a label for {city}"
+msgstr "Imposta un'etichetta per {city}"
+
+#: src/main_window.py:873
+msgid "_Cancel"
+msgstr "_Annulla"
+
+#: src/main_window.py:874
+msgid "C_lear"
+msgstr "C_ancella"
+
+#: src/main_window.py:875
+msgid "_Save"
+msgstr "_Salva"
+
+#: src/main_window.py:930
+#, python-brace-format
+msgid "Removed {city}"
+msgstr "{city} rimossa"
+
+#: src/main_window.py:933
+#, python-brace-format
+msgid "Removed {n} timezone"
+msgid_plural "Removed {n} timezones"
+msgstr[0] "Rimosso {n} fuso orario"
+msgstr[1] "Rimossi {n} fusi orari"
+
+#: src/main_window.py:938
+msgid "_Undo"
+msgstr "_Ripristina"
+
+#: src/main_window.py:1001
+msgid "Add timezone"
+msgstr "Aggiungi fuso orario"
+
+#: src/main_window.py:1002
+msgid "Back to today"
+msgstr "Torna a oggi"
+
+#: src/main_window.py:1004
+msgid "Quit"
+msgstr "Esci"
+
+#. Translators: a line of the keyboard shortcuts list, as in
+#. "Quit: Ctrl+Q".
+#: src/main_window.py:1011
+#, python-brace-format
+msgid "{action}: {keys}"
+msgstr "{action}: {keys}"
+
+#: src/main_window.py:1015
+msgid "_Close"
+msgstr "_Chiudi"
+
+#: src/main_window.py:1025
+msgid "Keep track of the time in cities that matter to you."
+msgstr "Tieni d'occhio l'ora nelle città che ti stanno a cuore."
+
+#. Translators: replace with your name, and your email address if
+#. you like, one translator per line.
+#: src/main_window.py:1028
+msgid "translator-credits"
+msgstr "Albano Battistella"
+
+#: src/main_window.py:1037
+msgid "Reorder Timezones"
+msgstr "Riordina fusi orari"
+
+#: src/main_window.py:1061 src/row.py:220
+msgid "Move up"
+msgstr "Sposta su"
+
+#: src/main_window.py:1065 src/row.py:221
+msgid "Move down"
+msgstr "Sposta giù"
+
+#: src/preferences.py:10
+msgid "Follow system"
+msgstr "Segui il sistema"
+
+#: src/preferences.py:11
+msgid "Light"
+msgstr "Chiaro"
+
+#: src/preferences.py:12
+msgid "Dark"
+msgstr "Scuro"
+
+#: src/preferences.py:50
+msgid "Appearance"
+msgstr "Aspetto"
+
+#: src/preferences.py:81
+msgid "Time format"
+msgstr "Formato dell'ora"
+
+#: src/preferences.py:83
+msgid "24-hour"
+msgstr "24 ore"
+
+#: src/preferences.py:90
+msgid "12-hour (AM/PM)"
+msgstr "12 ore (AM/PM)"
+
+#: src/preferences.py:118
+msgid "View options"
+msgstr "Opzioni di visualizzazione"
+
+#: src/preferences.py:123
+msgid "Show offsets"
+msgstr "Mostra differenze orarie"
+
+#: src/preferences.py:124
+msgid "Hours each city is ahead of or behind the reference"
+msgstr "Ore di anticipo o di ritardo di ogni città rispetto al riferimento"
+
+#: src/preferences.py:130
+msgid "Show day / night colors"
+msgstr "Mostra i colori giorno / notte"
+
+#: src/preferences.py:135
+msgid "Reorder timezones"
+msgstr "Riordina fusi orari"
+
+#: src/row.py:166
+msgid "Reference timezone"
+msgstr "Fuso orario di riferimento"
+
+#: src/row.py:217
+msgid "Set as reference timezone"
+msgstr "Imposta come fuso orario di riferimento"
+
+#: src/row.py:218
+msgid "Edit label…"
+msgstr "Modifica etichetta…"
+
+#: src/row.py:224
+msgid "Remove timezone"
+msgstr "Rimuovi fuso orario"
+
+#: src/row.py:231
+msgid "Timezone menu"
+msgstr "Menu del fuso orario"
+
+#. Translators: a city and the user's own label for it, as in
+#. "Cairo (Family)".
+#: src/share.py:40
+#, python-brace-format
+msgid "{city} ({label})"
+msgstr "{city} ({label})"
+
+#: src/share.py:147
+msgid "Meeting"
+msgstr "Riunione"
+
+#. Translators: the title of a saved calendar event, as in
+#. "Meeting · 15:00 London".
+#: src/share.py:152
+#, python-brace-format
+msgid "Meeting · {time} {city}"
+msgstr "Riunione · {time} {city}"
+
+#. Translators: a state or province and the country it is in, as in
+#. "Washington, United States".
+#: src/tzinfo_helpers.py:338
+#, python-brace-format
+msgctxt "state in country"
+msgid "{state}, {country}"
+msgstr "{state}, {country}"
+
+#: src/tzinfo_helpers.py:393
+msgctxt "time standard"
+msgid "Coordinated Universal Time"
+msgstr "Tempo coordinato universale"
+
+#. Translators: a difference between two clocks, in hours, as in "+2h" or
+#. "−5.5h". {sign} is + or −; add a space or change the unit to suit.
+#: src/tzinfo_helpers.py:595
+#, python-brace-format
+msgctxt "offset in hours"
+msgid "{sign}{hours}h"
+msgstr "{sign}{hours} h"
+
+#. Translators: a zone's offset from UTC, as in "UTC−3" or "UTC+5:30".
+#. {offset} is the signed offset; translate "UTC" if your language uses
+#. another abbreviation for it.
+#: src/tzinfo_helpers.py:612
+#, python-brace-format
+msgctxt "UTC offset"
+msgid "UTC{offset}"
+msgstr "UTC{offset}"
+
+#: src/tzinfo_helpers.py:746
+#, python-brace-format
+msgid ""
+"Clocks in {city} move back {span} at {time} on {date} — {repeated} occurs "
+"twice"
+msgstr ""
+"A {city} gli orologi vengono portati indietro di {span} alle {time} del "
+"{date}: le {repeated} si ripetono due volte"
+
+#: src/tzinfo_helpers.py:757
+#, python-brace-format
+msgid ""
+"Clocks in {city} move forward {span} at {time} on {date} — {time} does not "
+"occur"
+msgstr ""
+"A {city} gli orologi vengono portati avanti di {span} alle {time} del "
+"{date}: le {time} non esistono"
+
+#: src/tzinfo_helpers.py:765
+#, python-brace-format
+msgid "{n} hour"
+msgid_plural "{n} hours"
+msgstr[0] "{n} ora"
+msgstr[1] "{n} ore"
+
+#: src/tzinfo_helpers.py:767
+#, python-brace-format
+msgid "{n} minute"
+msgid_plural "{n} minutes"
+msgstr[0] "{n} minuto"
+msgstr[1] "{n} minuti"
